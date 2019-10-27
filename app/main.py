@@ -55,7 +55,7 @@ def tryToAddLogin():
             bemail = True
 
     if isLoginInDatabase(login):
-        return Response("login " + login + " is taken!", 201)
+        return Response("Login " + login + " is already in use!", 201)
     else:
         addUser(login, email, password)
         return Response("User " + login + " successfully added", 200)

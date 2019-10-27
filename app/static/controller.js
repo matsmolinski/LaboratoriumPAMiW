@@ -11,9 +11,6 @@ function tryToSubmit() {
         Http.onload = () => resolve(Http.responseText);
         Http.onerror = () => reject(Http.statusText);
         Http.send(user);
-        //   resolve(someValue); // fulfilled
-        // or
-        //   reject("failure reason"); // rejected
     });
     promise.then((message) => {
         document.getElementById('error-username').innerHTML = message;
