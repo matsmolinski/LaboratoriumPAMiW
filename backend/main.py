@@ -1,6 +1,8 @@
 from flask import Flask, Blueprint, request, Response, render_template
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)
 
 def isLoginInDatabase(login):
     users = []
@@ -25,9 +27,6 @@ def addUser(login, email, password):
     file.write(login + ' ' + email + ' ' + password + '\n')
 
 # Index
-@app.route('/', methods=['GET'])
-def app_index():
-	return render_template("registrationForm.html")
 @app.route('/database', methods=['GET'])
 def process_data():
 	return Response("Why do you use get?", 200)

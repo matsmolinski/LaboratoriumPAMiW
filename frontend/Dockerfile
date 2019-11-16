@@ -1,22 +1,22 @@
 FROM terrillo/python3flask:latest
 
 ENV STATIC_URL /static
-ENV STATIC_PATH /app/static
+ENV STATIC_PATH /frontend/static
 
 # Place your flask application on the server
-COPY ./app /app
-WORKDIR /app
+COPY ./frontend /frontend
+WORKDIR /frontend
 
 # Install requirements.txt
 RUN pip3 install --no-cache-dir -r requirements.txt
 
 # NGINX setup
-COPY ./nginx.sh /nginx.sh
-RUN chmod +x /nginx.sh
+COPY ./frontend/nginx.sh /frontend/nginx.sh
+RUN chmod +x /frontend/nginx.sh
 
-ENV PYTHONPATH=/app
+ENV PYTHONPATH=/frontend
 
-ENTRYPOINT ["/nginx.sh"]
+ENTRYPOINT ["/frontend/nginx.sh"]
 
 # Start Server
 CMD ["/start.sh"]
