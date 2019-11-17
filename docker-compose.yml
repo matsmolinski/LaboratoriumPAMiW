@@ -25,18 +25,14 @@ services:
     volumes:
       - ./frontend:/frontend
   database:
+    build: database/
     container_name: database
-    image: postgres:latest
-    restart: always
     environment:
-      - POSTGRES_USER=admin
-      - POSTGRES_PASSWORD=zetis
-      - POSTGRES_DB=db
+      - POSTGRES_PASSWORD=postgres
     ports:
       - "5432:5432"
     volumes:
       - postgres:/var/lib/postgresql/data/
-      - ../LaboratoriumPAMiW/database:/docker-entrypoint-initdb.d
 
 volumes:
   postgres:
