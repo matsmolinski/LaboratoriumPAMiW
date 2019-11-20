@@ -11,8 +11,8 @@ services:
       - "3030:80"
     volumes:
       - ./backend:/backend
-    depends_on:
-      - database
+    links:
+      - redis:redis
   frontend:
     container_name: frontend
     restart: always
@@ -24,15 +24,8 @@ services:
       - "3000:80"
     volumes:
       - ./frontend:/frontend
-  database:
-    build: database/
+  redis:
     container_name: database
-    environment:
-      - POSTGRES_PASSWORD=postgres
+    image: redis
     ports:
-      - "5432:5432"
-    volumes:
-      - postgres:/var/lib/postgresql/data/
-
-volumes:
-  postgres:
+      - "6379:6379"

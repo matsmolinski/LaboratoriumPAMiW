@@ -1,8 +1,10 @@
 from flask import Flask, Blueprint, request, Response, render_template
 from flask_cors import CORS
+import redis
 
 app = Flask(__name__)
 CORS(app)
+db = redis.Redis(host = 'redis', port = 6379, decode_responses=True)
 
 def isLoginInDatabase(login):
     users = []
@@ -29,7 +31,10 @@ def addUser(login, email, password):
 # Index
 @app.route('/database', methods=['GET'])
 def process_data():
-	return Response("Why do you use get?", 200)
+    db.set("slawek", 30)
+    db.expire("slawek", 60)
+    return Response("Why do you use get?", 200)
+
 @app.route('/database', methods=['POST'])
 def tryToAddLogin():
     user = request.data.decode("utf-8")
