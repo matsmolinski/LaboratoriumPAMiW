@@ -4,11 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registration form</title>
-    <script type="text/javascript" src="{{ url_for('static', filename='controller.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='registration.js') }}"></script>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
-<form name="panel" onsubmit="tryToSubmit(); return false">
+<form name="panel" onsubmit="tryToSubmit(); return false" method="post">
     <div class="panel">
         <header><strong>Registration</strong></header>
         <br>
@@ -43,8 +43,8 @@
             <span id="error-rpasswd" class="error" aria-live="polite"></span>
         </label>
         <hr>
-
-        <button type="submit" class="registerbutton">Register</button>
+        <button type="submit" class="normalbutton">Register</button>
+        <p>Already have an account? <a href="/login">Sign in</a></p>
     </div>
 </form>
 </body>

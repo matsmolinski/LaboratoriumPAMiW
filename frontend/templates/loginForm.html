@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login form</title>
+    <script type="text/javascript" src="{{ url_for('static', filename='login.js') }}"></script>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+<form name="panel" onsubmit="tryToSubmit(); return false">
+    <div class="panel">
+        <header><strong>Sign in</strong></header>
+        <br>
+        <label><b>Username</b>
+            <br>
+            <input id="username" type="text" placeholder="Enter username" name="user" required>
+            <br>
+            <span id="error-username" class="error" aria-live="polite"></span>
+            <br>
+        </label>
+        <br>
+        <label><b>Password</b>
+            <br>
+            <input id="passwd" type="password" placeholder="Enter password" name="psw" required>
+            <br>
+            <span id="error-passwd" class="error" aria-live="polite"></span>
+            <br>
+        </label>
+        <hr>
+        <button type="submit" class="normalbutton">Sign in</button>
+        <br>
+        <p>Don't have an account? <a href="/registration">Sign up</a></p>
+    </div>
+</form>
+</body>
+</html>

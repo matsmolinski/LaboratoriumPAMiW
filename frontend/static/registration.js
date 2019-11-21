@@ -1,9 +1,14 @@
 
 function tryToSubmit() {
-    let email = document.getElementById('email');
-    let username = document.getElementById('username');
-    let password = document.getElementById('passwd');
-    let user = username.value + '\n' + email.value + '\n' + password.value;
+    let mail = document.getElementById('email').value;
+    let username = document.getElementById('username').value;
+    let passwd = document.getElementById('passwd').value;
+    var user = {
+        name: username,
+        email: mail,
+        password: passwd
+    };
+    user = JSON.stringify(user);
     const promise = new Promise((resolve, reject) => {
         const Http = new XMLHttpRequest();
         const url='http://localhost:3030/database';

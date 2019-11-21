@@ -1,6 +1,7 @@
 from flask import Flask, Blueprint, request, Response, render_template
 from flask_cors import CORS
 import redis
+import json
 
 app = Flask(__name__)
 CORS(app)
@@ -24,6 +25,27 @@ def isLoginInDatabase(login):
     except IOError:
         return False
 
+def checkPassword(luser):
+    users = []
+    try:
+        file = open("database.txt", 'r')
+        for line in file:
+            line = line.strip().split()
+            users.append({
+                'login': line[0],
+                'email': line[1],
+                'password': line[2]
+            })
+        for user in users:
+            if(user["login"] == luser['name']):
+                if user["password"] == luser['password']:
+                    return True
+                return False
+                
+        return False
+    except IOError:
+        return False
+
 def addUser(login, email, password):
     file = open("database.txt", 'a')
     file.write(login + ' ' + email + ' ' + password + '\n')
@@ -37,26 +59,10 @@ def process_data():
 
 @app.route('/database', methods=['POST'])
 def tryToAddLogin():
-    user = request.data.decode("utf-8")
-    login = ""
-    email = ""
-    password = ""
-    blogin = True
-    bemail = False
-    bpass = False
-    for char in user:
-        if blogin and char != '\n':
-            login += char
-        if bemail and char != '\n':
-            email += char
-        if bpass and char != '\n':
-            password += char
-        if bemail and char == '\n':
-            bemail = False
-            bpass = True
-        if blogin and char == '\n':
-            blogin = False
-            bemail = True
+    user = json.loads(request.data)
+    login = user['name']
+    email = user['email']
+    password = user['password']
 
     if isLoginInDatabase(login):
         return Response("Login " + login + " is already in use!", 201)
@@ -64,6 +70,16 @@ def tryToAddLogin():
         addUser(login, email, password)
         return Response("User " + login + " successfully added", 200)
 
+@app.route('/authorise', methods=['POST'])
+def tryToLogIn():
+    user = json.loads(request.data)
+    if isLoginInDatabase(user["name"]):
+        if checkPassword(user):
+            return Response("User logged in", 200)
+        else:
+            return Response("Password is invalid", 211)
+    else:
+        return Response("User unrecognized", 210)
 
 #return 'PAMIW >> Hello World'
 if __name__ == "__main__":
