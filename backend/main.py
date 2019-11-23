@@ -1,14 +1,15 @@
-from flask import Flask, Blueprint, request, Response, render_template
+from flask import Flask, Blueprint, request, Response, render_template, redirect, send_file
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required
 import os
+import sys
 import redis
 import json
 import random
 import string
 
 def generateKey(stringLength):
-    characters = string.ascii_letters + string.digits + string.punctuation
+    characters = string.ascii_letters + string.digits
     return ''.join(random.choice(characters) for i in range(stringLength))
 
 app = Flask(__name__)
@@ -112,5 +113,53 @@ def checkIfLoggedIn():
         return Response("Authorization failed", 201)
     return Response("Everything fine", 200)
 
+@app.route('/pdfs/list', methods=['GET'])
+def getPdfList():
+    files = db.hvals("filenames")
+    message = {
+        "links": files
+    }
+    return Response(json.dumps(message), 200)
+
+@app.route("/pdfs", methods=["POST"])
+def uploadPdf():
+    f = request.files["pdf"]
+    savePdf(f)
+    return redirect("http://localhost:3000/cloud")
+
+@app.route("/pdfs/<string:name>", methods=["GET"])
+@jwt_required
+def downloadPdf(name):
+    full_name = db.hget(name, "path_to_file")
+    org_filename = db.hget(name, "org_filename")
+    if(full_name != None):
+        try:
+            return send_file(full_name, attachment_filename = org_filename)
+        except Exception as e:
+            print(e, file = sys.stderr)
+
+    return org_filename, 200
+
+def savePdf(file_to_save):
+
+    path_to_file = "files/" + file_to_save.filename
+    file_to_save.save(path_to_file)
+    db.hset(file_to_save.filename, "org_filename", file_to_save.filename)
+    db.hset(file_to_save.filename, "path_to_file", path_to_file)
+    db.hset("filenames", file_to_save.filename, file_to_save.filename)
+
+
 if __name__ == "__main__":
 	app.run(host='0.0.0.0', port=80)
+
+
+'''
+filename_prefix = str(db.incr("file_counter"))
+        new_filename = filename_prefix + file_to_save.filename
+        path_to_file = "files/" + new_filename
+        file_to_save.save(path_to_file)
+
+        db.hset(new_filename, "org_filename", file_to_save.filename)
+        db.hset(new_filename, "path_to_file", path_to_file)
+        db.hset("filenames", new_filename, file_to_save.filename)
+'''

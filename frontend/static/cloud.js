@@ -28,8 +28,10 @@ function checkSession() {
     });
     promise.then((value) => {
         if(value[1] !== 200) {
-            alert('You are not authorized to use this site');
-            window.location.replace("http://localhost:3000/login");
+            document.cookie = "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+            document.cookie = "sessionid=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+            //alert('You are not authorized to use this site');
+            //window.location.replace("http://localhost:3000/login");
         }
     }).catch((message) => {
         document.getElementById('error').innerHTML = message;
@@ -37,7 +39,7 @@ function checkSession() {
 }
 
 
-function tryToSubmit() {
+function tryToLogOut() {
 
     var user = {
         name: getCookie("user"),
@@ -58,6 +60,10 @@ function tryToSubmit() {
     }).catch((message) => {
         document.getElementById('error').innerHTML = message;
     });
+
+}
+
+function checkIfFileAttached() {
 
 }
 
