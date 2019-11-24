@@ -1,4 +1,4 @@
-dd
+
 
 function getCookie(cname) {
     var name = cname + "=";
@@ -41,9 +41,9 @@ function checkSession() {
 
 function tryToLogOut() {
     var user = {
-        name: getCookie("user"),
         sessionid: getCookie("sessionid")
     }
+    user = JSON.stringify(user)
     const promise = new Promise((resolve, reject) => {
         const Http = new XMLHttpRequest();
         const url='http://localhost:3030/logout';
