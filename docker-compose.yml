@@ -25,7 +25,5 @@ services:
     volumes:
       - ./frontend:/frontend
   redis:
-    container_name: database
+    container_name: redis
     image: redis
-    ports:
-      - "6379:6379"

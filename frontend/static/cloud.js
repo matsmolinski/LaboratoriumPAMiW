@@ -1,4 +1,4 @@
-
+dd
 
 function getCookie(cname) {
     var name = cname + "=";
@@ -40,7 +40,6 @@ function checkSession() {
 
 
 function tryToLogOut() {
-
     var user = {
         name: getCookie("user"),
         sessionid: getCookie("sessionid")
@@ -63,9 +62,30 @@ function tryToLogOut() {
 
 }
 
-function checkIfFileAttached() {
+function getPdf(name) {
+    let anchor = document.createElement("a");
+    document.body.appendChild(anchor);
+    let file = 'http://localhost:3030/pdfs/' + name;
 
+    let headers = new Headers();
+    headers.append('Authorization', 'Bearer '+getCookie('jwt'));
+
+    fetch(file, { headers })
+        .then(response => {
+            if(!response.ok) {
+                throw new Error('JWT authentication failed');
+            }
+            return response.blob();
+        } )
+        .then(blobby => {
+            let objectUrl = window.URL.createObjectURL(blobby);
+
+            anchor.href = objectUrl;
+            anchor.download = name;
+            anchor.click();
+
+            window.URL.revokeObjectURL(objectUrl);
+        })
+        .catch(error => document.getElementById('error').innerHTML = error);
 }
-
-
 window.onload = checkSession;

@@ -46,6 +46,19 @@ input[type=text]:focus, input[type=password]:focus {
     font-size: larger;
 }
 
+
+.linkbutton {
+    background: none!important;
+    border: none;
+    padding: 0!important;
+    /*optional*/
+    font-family: arial, sans-serif;
+    /*input has OS specific font-family*/
+    color: #069;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
 .error {
     width  : 60%;
     padding: 0;

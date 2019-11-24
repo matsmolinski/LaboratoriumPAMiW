@@ -1,6 +1,7 @@
-from flask import Flask, Blueprint, request, Response, render_template, redirect, send_file
+from flask import Flask, jsonify, Blueprint, request, Response, render_template, redirect, send_file, send_from_directory
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required
+from flask_swagger_ui import get_swaggerui_blueprint
 import os
 import sys
 import redis
@@ -63,10 +64,22 @@ def addUser(login, email, password):
     file = open("database.txt", 'a')
     file.write(login + ' ' + email + ' ' + password + '\n')
 
-# Index
-@app.route('/database', methods=['GET'])
-def process_data():
-    return Response("Why do you use get?", 200)
+@app.route("/static/<path:path>")
+def send_static(path):
+    return send_from_directory('static', path)
+
+SWAGGER_URL = "/swagger"
+API_URL = "/static/swagger.json"
+swaggerui_blueprint = get_swaggerui_blueprint(
+    SWAGGER_URL,
+    API_URL,
+    config={
+        "app_name": "backend"
+    }
+)
+
+app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
+
 
 @app.route('/database', methods=['POST'])
 def tryToAddLogin():
@@ -130,6 +143,7 @@ def uploadPdf():
 @app.route("/pdfs/<string:name>", methods=["GET"])
 @jwt_required
 def downloadPdf(name):
+    print(request.cookies.get("jwt"))
     full_name = db.hget(name, "path_to_file")
     org_filename = db.hget(name, "org_filename")
     if(full_name != None):
@@ -151,15 +165,3 @@ def savePdf(file_to_save):
 
 if __name__ == "__main__":
 	app.run(host='0.0.0.0', port=80)
-
-
-'''
-filename_prefix = str(db.incr("file_counter"))
-        new_filename = filename_prefix + file_to_save.filename
-        path_to_file = "files/" + new_filename
-        file_to_save.save(path_to_file)
-
-        db.hset(new_filename, "org_filename", file_to_save.filename)
-        db.hset(new_filename, "path_to_file", path_to_file)
-        db.hset("filenames", new_filename, file_to_save.filename)
-'''

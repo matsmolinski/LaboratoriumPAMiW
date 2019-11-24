@@ -2,3 +2,4 @@ flask
 flask_cors
 redis
 flask_jwt_extended
+flask_swagger_ui

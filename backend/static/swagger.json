@@ -1,0 +1,264 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "description": "Mateusz Smoliński",
+    "version": "1.0.0",
+    "title": "Backend swagger",
+    "contact": {
+      "email": "01131251@pw.edu.pl"
+    }
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Authorization",
+      "description": "User authorization with backend"
+    },
+    {
+      "name": "Registration",
+      "description": "Adding user to provisional database"
+    },
+    {
+      "name": "Library",
+      "description": "Adding and getting pdf files"
+    }
+  ],
+  "paths": {
+    "/database": {
+      "post": {
+        "tags": [
+          "Registration"
+        ],
+        "summary": "Adds user to database",
+        "requestBody": {
+          "description": "Checked user data",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/newuser"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User successfully added"
+          },
+          "201": {
+            "description": "Login already in use"
+          }
+        }
+      }
+    },
+    "/login": {
+      "post": {
+        "tags": [
+          "Authorization"
+        ],
+        "summary": "Tries to log in user",
+        "requestBody": {
+          "description": "Checked user data",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/user"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "schema": {
+              "$ref": "#/components/schemas/cookies"
+            }
+          },
+          "210": {
+            "description": "User unrecognized"
+          },
+          "211": {
+            "description": "Password is invalid"
+          }
+        }
+      }
+    },
+    "/logout": {
+      "post": {
+        "tags": [
+          "Authorization"
+        ],
+        "summary": "Tries to log out user",
+        "requestBody": {
+          "description": "Id of the session",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/sessionid"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User logged out"
+          }
+        }
+      }
+    },
+    "/check": {
+      "post": {
+        "tags": [
+          "Authorization"
+        ],
+        "summary": "Checks if user has valid session ID",
+        "requestBody": {
+          "description": "Id of the session",
+          "required": true,
+          "content": {
+            "schema": {
+              "$ref": "#/components/schemas/sessionid"
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Everything fine"
+          },
+          "201": {
+            "description": "Authorization failed"
+          }
+        }
+      }
+    },
+    "/pdfs": {
+      "post": {
+        "tags": [
+          "Library"
+        ],
+        "summary": "Adds position to database",
+        "requestBody": {
+          "description": "Pdf file",
+          "required": true,
+          "content": {
+            "file": {
+              "description": "Pdf file"
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "forces refresh on the site"
+          }
+        }
+      }
+    },
+    "/pdfs/<string:name>": {
+      "get": {
+        "tags": [
+          "Library"
+        ],
+        "summary": "Tries to get file from db",
+        "requestBody": {
+          "description": "Name of the file",
+          "required": true,
+          "content": {
+            "schema": {
+              "$ref": "#/components/schemas/filename"
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Filename if not found",
+            "file": {
+              "description": "Pdf file"
+            }
+          }
+        }
+      }
+    },
+    "/pdfs/list": {
+      "post": {
+        "tags": [
+          "Library"
+        ],
+        "summary": "Returns list of pfds' names",
+        "responses": {
+          "200": {
+            "schema": {
+              "$ref": "#/components/schemas/listofpdfs"
+            }
+          }
+        }
+      }
+    },
+    "components": {
+      "schemas": {
+        "newuser": {
+          "type": "json",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "email": {
+              "type": "string"
+            },
+            "password": {
+              "type": "string"
+            }
+          }
+        },
+        "user": {
+          "type": "json",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "password": {
+              "type": "string"
+            }
+          }
+        },
+        "cookies": {
+          "type": "json",
+          "properties": {
+            "sessionid": {
+              "type": "string"
+            },
+            "jwt": {
+              "type": "string"
+            }
+          }
+        },
+        "sessionid": {
+          "type": "string",
+          "properties": {
+            "sessionid": {
+              "type": "string"
+            }
+          }
+        },
+        "filename": {
+          "type": "string",
+          "properties": {
+            "filename": {
+              "type": "string"
+            }
+          }
+        },
+        "listofpdfs": {
+          "type": "object",
+          "properties": {
+              "type":"string"
+          }
+        }
+      }
+    }
+  }
+}
