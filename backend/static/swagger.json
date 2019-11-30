@@ -51,6 +51,9 @@
           },
           "201": {
             "description": "Login already in use"
+          },
+          "400": {
+            "description": "Failed to read request"
           }
         }
       }
@@ -65,7 +68,7 @@
           "description": "Checked user data",
           "required": true,
           "content": {
-            "application/json": {
+            "json": {
               "schema": {
                 "$ref": "#/components/schemas/user"
               }
@@ -83,6 +86,9 @@
           },
           "211": {
             "description": "Password is invalid"
+          },
+          "400": {
+            "description": "Failed to read request"
           }
         }
       }
@@ -97,7 +103,7 @@
           "description": "Id of the session",
           "required": true,
           "content": {
-            "application/json": {
+            "json": {
               "schema": {
                 "$ref": "#/components/schemas/sessionid"
               }
@@ -107,6 +113,9 @@
         "responses": {
           "200": {
             "description": "User logged out"
+          },
+          "400": {
+            "description": "Failed to read request"
           }
         }
       }
@@ -121,10 +130,12 @@
           "description": "Id of the session",
           "required": true,
           "content": {
-            "schema": {
-              "$ref": "#/components/schemas/sessionid"
-            }
-          }
+            "json": {
+              "schema": {
+                "$ref": "#/components/schemas/sessionid"
+              }
+            }   
+          }       
         },
         "responses": {
           "200": {
@@ -132,6 +143,9 @@
           },
           "201": {
             "description": "Authorization failed"
+          },
+          "400": {
+            "description": "Failed to read request"
           }
         }
       }
@@ -147,13 +161,23 @@
           "required": true,
           "content": {
             "file": {
-              "description": "Pdf file"
+              "schema": {
+                "file": {
+                  "type": "file",
+                  "properties": {
+                      "type":"file"
+                  }
+                }
+              }
             }
           }
         },
         "responses": {
           "200": {
             "description": "forces refresh on the site"
+          },
+          "400": {
+            "description": "Failed to read request"
           }
         }
       }
@@ -164,15 +188,6 @@
           "Library"
         ],
         "summary": "Tries to get file from db",
-        "requestBody": {
-          "description": "Name of the file",
-          "required": true,
-          "content": {
-            "schema": {
-              "$ref": "#/components/schemas/filename"
-            }
-          }
-        },
         "responses": {
           "200": {
             "description": "Filename if not found",
@@ -184,63 +199,69 @@
       }
     },
     "/pdfs/list": {
-      "post": {
+      "get": {
         "tags": [
           "Library"
         ],
         "summary": "Returns list of pfds' names",
         "responses": {
           "200": {
-            "schema": {
-              "$ref": "#/components/schemas/listofpdfs"
-            }
           }
         }
       }
-    },
+    }
+  },
     "components": {
       "schemas": {
         "newuser": {
-          "type": "json",
+          "type": "object",
           "properties": {
             "name": {
-              "type": "string"
+              "type": "string",
+              "format": "string"
             },
             "email": {
-              "type": "string"
+              "type": "string",
+              "format": "string"
             },
             "password": {
-              "type": "string"
+              "type": "string",
+              "format": "string"
             }
           }
         },
         "user": {
-          "type": "json",
+          "type": "object",
           "properties": {
             "name": {
-              "type": "string"
+              "type": "string",
+              "format": "string"
             },
             "password": {
-              "type": "string"
+              "type": "string",
+              "format": "string"
             }
           }
         },
         "cookies": {
-          "type": "json",
+          "type": "object",
           "properties": {
             "sessionid": {
-              "type": "string"
+              "type": "string",
+              "format": "string"
             },
             "jwt": {
-              "type": "string"
+              "type": "string",
+              "format": "string"
             }
           }
         },
         "sessionid": {
-          "type": "string",
+          "type": "object",
           "properties": {
             "sessionid": {
-              "type": "string"
+              "type": "string",
+              "format": "string"
             }
           }
         },
@@ -251,14 +272,7 @@
               "type": "string"
             }
           }
-        },
-        "listofpdfs": {
-          "type": "object",
-          "properties": {
-              "type":"string"
-          }
         }
       }
     }
-  }
 }
