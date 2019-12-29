@@ -30,8 +30,8 @@ function checkSession() {
         if(value[1] !== 200) {
             document.cookie = "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
             document.cookie = "sessionid=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-            //alert('You are not authorized to use this site');
-            //window.location.replace("http://localhost:3000/login");
+            alert('You are not authorized to use this site');
+            window.location.replace("http://localhost:3000/login");
         }
     }).catch((message) => {
         document.getElementById('error').innerHTML = message;
@@ -68,9 +68,9 @@ function getPdf(name) {
     let file = 'http://localhost:3030/pdfs/' + name;
 
     let headers = new Headers();
-    headers.append('Authorization', 'Bearer '+getCookie('jwt'));
+    headers.append('Authorization', getCookie('jwt'));
 
-    fetch(file, { headers })
+    fetch(file, { headers, method: 'GET' })
         .then(response => {
             if(!response.ok) {
                 throw new Error('JWT authentication failed');
@@ -88,4 +88,24 @@ function getPdf(name) {
         })
         .catch(error => document.getElementById('error').innerHTML = error);
 }
+
+function removePdf(name) {
+    let file = 'http://localhost:3030/pdfs/' + name;
+
+    let headers = new Headers();
+    headers.append('Authorization', getCookie('jwt'));
+
+    fetch(file, { headers, method: 'DELETE'})
+        .then(response => {
+            if(!response.ok) {
+                throw new Error('JWT authentication failed');
+            }
+            return response.blob();
+        } )
+        .then(blobby => {
+            window.location.replace("http://localhost:3000/cloud");
+        })
+        .catch(error => document.getElementById('error').innerHTML = error);
+}
+
 window.onload = checkSession;

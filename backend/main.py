@@ -1,7 +1,8 @@
 from flask import Flask, jsonify, Blueprint, request, Response, render_template, redirect, send_file, send_from_directory
 from flask_cors import CORS
-from flask_jwt_extended import JWTManager, create_access_token, jwt_required
+#from flask_jwt_extended import JWTManager, create_access_token, jwt_required
 from flask_swagger_ui import get_swaggerui_blueprint
+import jwt
 import os
 import sys
 import redis
@@ -17,9 +18,10 @@ app = Flask(__name__)
 CORS(app)
 db = redis.Redis(host = 'redis', port = 6379, decode_responses=True)
 
-app.config["JWT_SECRET_KEY"] = generateKey(20)
-app.config["JWT_ACCESS_TOKEN_EXPIRES"] = 300
-jwt = JWTManager(app)
+secret_key = generateKey(20)
+#app.config["JWT_SECRET_KEY"] = generateKey(20)
+#app.config["JWT_ACCESS_TOKEN_EXPIRES"] = 300
+#jwt = JWTManager(app)
  
 SWAGGER_URL = "/swagger"
 API_URL = "/static/swagger.json"
@@ -78,11 +80,15 @@ def tryToLogIn():
             if checkPassword(user):
                 sessionid = generateKey(10)
                 db.set(sessionid, 1, ex = 300)
-                access_token = create_access_token(identity = user["name"])
+                #access_token = create_access_token(identity = user["name"])
+                access_token = jwt.encode({'user': user['name']}, secret_key, algorithm='HS256')
+                db.lpush('users', user["name"])
                 message = {
                     "sessionid": sessionid,
-                    "jwt": access_token
+                    "jwt": access_token.decode('utf-8')
                 }
+                #resp.set_cookie('sessionid', sessionid, domain='localhost')
+                #resp.set_cookie('jwt', access_token.decode('utf-8'), domain='dev.localhost')
                 return Response(json.dumps(message), 200)
                 
             else:
@@ -118,7 +124,7 @@ def checkIfLoggedIn():
 
 @app.route('/pdfs/list', methods=['GET'])
 def getPdfList():
-    files = db.hvals("filenames")
+    files = db.lrange('filenames', 0, 1000000)
     message = {
         "links": files
     }
@@ -134,18 +140,32 @@ def uploadPdf():
         print(e, file = sys.stderr)
         return Response("Failed to read request", 400)
 
-@app.route("/pdfs/<string:name>", methods=["GET"])
-@jwt_required
+@app.route("/pdfs/<string:name>", methods=["GET", "DELETE"])
 def downloadPdf(name):
-    full_name = db.hget(name, "path_to_file")
-    org_filename = db.hget(name, "org_filename")
-    if(full_name != None):
-        try:
-            return send_file(full_name, attachment_filename = org_filename)
-        except Exception as e:
-            print(e, file = sys.stderr)
+    try:
+        jwtek = request.headers.get('Authorization')
+        decoded = jwt.decode(jwtek.encode(), secret_key, algorithms='HS256')
 
-    return org_filename, 200
+        if not checkJwt(decoded):
+            return 'JWT authentication failed', 400
+
+        full_name = db.hget(name, "path_to_file")
+        org_filename = db.hget(name, "org_filename")
+        if(full_name != None):
+            try:
+                if request.method == 'GET':
+                    return send_file(full_name, attachment_filename = org_filename)
+                else:
+                    removePdf(name)
+                    return "File is no more", 200
+                
+            except Exception as e:
+                print(e, file = sys.stderr)
+
+        return org_filename, 200
+    except Exception as e:
+        print(e, file = sys.stderr)
+        return 'JWT authentication failed', 400
 
 def savePdf(file_to_save):
 
@@ -153,8 +173,21 @@ def savePdf(file_to_save):
     file_to_save.save(path_to_file)
     db.hset(file_to_save.filename, "org_filename", file_to_save.filename)
     db.hset(file_to_save.filename, "path_to_file", path_to_file)
-    db.hset("filenames", file_to_save.filename, file_to_save.filename)
+    db.lpush("filenames", file_to_save.filename)
 
+def removePdf(name):
+    path_to_file = "files/" + name
+    os.remove(path_to_file)
+    db.delete(name)
+    db.lrem("filenames", 0, name)
+
+def checkJwt(token):
+    if token == None:
+        return False
+    for user in db.lrange('users', 0, 1000000):
+        if user == token['user']:
+            return True
+    return False
 
 if __name__ == "__main__":
 	app.run(host='0.0.0.0', port=80)

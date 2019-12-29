@@ -19,7 +19,7 @@
             </form>
             <ul>
                 {% for pdf in links %}
-                <li><button type="button" class="linkbutton" onclick="getPdf('{{pdf}}')">{{ pdf }}</button></li>
+                <li><button type="button" class="linkbutton" onclick="getPdf('{{pdf}}')">{{ pdf }}</button> <button type="button" class="linkbutton" onclick="removePdf('{{pdf}}')"> remove</button></li>
                 {% endfor %}
             </ul>
         </section>
