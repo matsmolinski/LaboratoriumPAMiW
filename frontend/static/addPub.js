@@ -62,15 +62,15 @@ function tryToLogOut() {
 
 }
 
-function getPublication(name) {
+function getPdf(name) {
     let anchor = document.createElement("a");
     document.body.appendChild(anchor);
-    let file = 'http://localhost:3000/publications/' + name;
+    let file = 'http://localhost:3030/pdfs/' + name;
 
     let headers = new Headers();
     headers.append('Authorization', getCookie('jwt'));
 
-    fetch(file.replace(/\s/g, ''), { headers, method: 'GET' })
+    fetch(file, { headers, method: 'GET' })
         .then(response => {
             if(!response.ok) {
                 throw new Error('JWT authentication failed');
@@ -89,13 +89,13 @@ function getPublication(name) {
         .catch(error => document.getElementById('error').innerHTML = error);
 }
 
-function removePublication(name) {
-    let file = 'http://localhost:3030/publications/' + name;
+function removePdf(name) {
+    let file = 'http://localhost:3030/pdfs/' + name;
 
     let headers = new Headers();
     headers.append('Authorization', getCookie('jwt'));
 
-    fetch(file.replace(/\s/g, ''), { headers, method: 'DELETE'})
+    fetch(file, { headers, method: 'DELETE'})
         .then(response => {
             if(!response.ok) {
                 throw new Error('JWT authentication failed');

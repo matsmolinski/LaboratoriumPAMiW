@@ -81,8 +81,8 @@ def tryToLogIn():
                 sessionid = generateKey(10)
                 db.set(sessionid, 1, ex = 300)
                 #access_token = create_access_token(identity = user["name"])
-                access_token = jwt.encode({'user': user['name']}, secret_key, algorithm='HS256')
-                db.lpush('users', user["name"])
+                access_token = jwt.encode({'user': sessionid}, secret_key, algorithm='HS256')
+                db.lpush('users', sessionid)
                 message = {
                     "sessionid": sessionid,
                     "jwt": access_token.decode('utf-8')
@@ -105,6 +105,7 @@ def tryToLogOut():
     try:
         user = json.loads(request.data)
         db.delete(user["sessionid"])
+        db.lrem('users', 0, user["sessionid"])
         return Response("Logged out", 200)
     except Exception as e:
         print(e, file = sys.stderr)
@@ -166,6 +167,42 @@ def downloadPdf(name):
     except Exception as e:
         print(e, file = sys.stderr)
         return 'JWT authentication failed', 400
+
+@app.route("/publications", methods=["POST"])
+def addPublication():
+    try:
+        title = request.get_json()['title'].replace(" ", "")
+        db.hset(title, 'title', request.get_json()['title'])
+        db.hset(title, 'author', request.get_json()['author'])
+        db.hset(title, 'publisher', request.get_json()['publisher'])
+        db.lpush('pubnames', title)
+        return "ok", 200
+    except Exception as e:
+        print(e, file = sys.stderr)
+        return Response("Failed to read request", 400)
+
+@app.route("/publications", methods=["GET"])
+def getPublications():
+    files = db.lrange('pubnames', 0, 1000000)
+    message = {
+        "links": files
+    }
+    return Response(json.dumps(message), 200)
+
+@app.route("/publications/<title>", methods=["GET"])
+def getPublication(title):
+    message = {
+        "title": db.hget(title, 'title'),
+        "author": db.hget(title, 'author'),
+        "publisher": db.hget(title, 'publisher')
+    }
+    return Response(json.dumps(message), 200)
+
+@app.route("/publications/<title>", methods=["DELETE"])
+def removePublication(title):
+    db.delete(title)
+    db.lrem("pubnames", 0, title)
+    return "Publication is no more", 200
 
 def savePdf(file_to_save):
 

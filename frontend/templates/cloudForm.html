@@ -3,23 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login form</title>
+    <title>Cloud form</title>
     <script type="text/javascript" src="{{ url_for('static', filename='cloud.js') }}"></script>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
     <div class="panel">
-        <header><strong>Pdf cloud</strong></header>
+        <header><strong>Publications cloud</strong></header>
         <span id="error" class="error" aria-live="polite"></span>
         <br>
         <section>
-            <form action = "http://localhost:3030/pdfs" method = "POST" enctype = "multipart/form-data">
-                <input id="file" type = "file" name = "pdf" required/>
-                <input type = "submit" value="Add file"/>
+            <form action = "http://localhost:3000/add-publication" method = "GET">
+                <button class="normalbutton" type = "submit">Add publication</button>
             </form>
             <ul>
-                {% for pdf in links %}
-                <li><button type="button" class="linkbutton" onclick="getPdf('{{pdf}}')">{{ pdf }}</button> <button type="button" class="linkbutton" onclick="removePdf('{{pdf}}')"> remove</button></li>
+                {% for publication in links %}
+                <li><button type="button" class="linkbutton" onclick="getPublication('{{publication}}')">{{ publication }}</button> <button type="button" class="linkbutton" onclick="removePublication('{{publication}}')"> remove</button></li>
                 {% endfor %}
             </ul>
         </section>
