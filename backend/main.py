@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, Blueprint, request, Response, render_template, redirect, send_file, send_from_directory
+from flask import Flask, jsonify, Blueprint, request, Response, render_template, redirect, send_file, send_from_directory, jsonify
 from flask_cors import CORS
 #from flask_jwt_extended import JWTManager, create_access_token, jwt_required
 from flask_swagger_ui import get_swaggerui_blueprint
@@ -9,6 +9,7 @@ import redis
 import json
 import random
 import string
+import shutil
 
 def generateKey(stringLength):
     characters = string.ascii_letters + string.digits
@@ -16,8 +17,8 @@ def generateKey(stringLength):
 
 app = Flask(__name__)
 CORS(app)
-db = redis.Redis(host = 'redis', port = 6379, decode_responses=True)
-
+dbauth = redis.Redis(host = 'redis', port = 6379, decode_responses=True, db = 0)
+db = redis.Redis(host = 'redis', port = 6379, decode_responses=True, db = 1)
 secret_key = generateKey(20)
 #app.config["JWT_SECRET_KEY"] = generateKey(20)
 #app.config["JWT_ACCESS_TOKEN_EXPIRES"] = 300
@@ -79,7 +80,7 @@ def tryToLogIn():
         if isLoginInDatabase(user["name"]):
             if checkPassword(user):
                 sessionid = generateKey(10)
-                db.set(sessionid, 1, ex = 300)
+                dbauth.set(sessionid, 1, ex = 300)
                 #access_token = create_access_token(identity = user["name"])
                 access_token = jwt.encode({'user': sessionid}, secret_key, algorithm='HS256')
                 db.lpush('users', sessionid)
@@ -104,8 +105,8 @@ def tryToLogIn():
 def tryToLogOut():
     try:
         user = json.loads(request.data)
-        db.delete(user["sessionid"])
-        db.lrem('users', 0, user["sessionid"])
+        dbauth.delete(user["sessionid"])
+        #db.lrem('users', 0, user["sessionid"])
         return Response("Logged out", 200)
     except Exception as e:
         print(e, file = sys.stderr)
@@ -115,7 +116,8 @@ def tryToLogOut():
 @app.route('/check', methods=['POST'])
 def checkIfLoggedIn():
     try:
-        session = db.get(request.data)
+        #users = db.lrange('users', 0, 100000)       
+        session = dbauth.get(request.data)
         if session == None:
             return Response("Authorization failed", 201)
         return Response("Everything fine", 200)
@@ -131,18 +133,18 @@ def getPdfList():
     }
     return Response(json.dumps(message), 200)
 
-@app.route("/pdfs", methods=["POST"])
-def uploadPdf():
+@app.route("/publications/<title>", methods=["POST"])
+def uploadPdf(title):
     try:
         f = request.files["pdf"]
-        savePdf(f)
-        return redirect("http://localhost:3000/cloud")
+        savePdf(f, title)
+        return "ok", 200
     except Exception as e:
         print(e, file = sys.stderr)
         return Response("Failed to read request", 400)
 
-@app.route("/pdfs/<string:name>", methods=["GET", "DELETE"])
-def downloadPdf(name):
+@app.route("/publications/<title>/<name>", methods=["GET", "DELETE"])
+def downloadDeletePdf(title, name):
     try:
         jwtek = request.headers.get('Authorization')
         decoded = jwt.decode(jwtek.encode(), secret_key, algorithms='HS256')
@@ -150,14 +152,16 @@ def downloadPdf(name):
         if not checkJwt(decoded):
             return 'JWT authentication failed', 400
 
-        full_name = db.hget(name, "path_to_file")
-        org_filename = db.hget(name, "org_filename")
+        full_name = db.hget(title + '/' + name, "path_to_file")
+        org_filename = db.hget(title + '/' + name, "org_filename")
+        print(title)
+        print(name)
         if(full_name != None):
             try:
-                if request.method == 'GET':
+                if request.method == 'GET':                   
                     return send_file(full_name, attachment_filename = org_filename)
                 else:
-                    removePdf(name)
+                    removePdf(name, title)
                     return "File is no more", 200
                 
             except Exception as e:
@@ -194,37 +198,47 @@ def getPublication(title):
     message = {
         "title": db.hget(title, 'title'),
         "author": db.hget(title, 'author'),
-        "publisher": db.hget(title, 'publisher')
+        "publisher": db.hget(title, 'publisher'),
+        "links": db.lrange(title + " filenames", 0, 100000)
     }
     return Response(json.dumps(message), 200)
 
 @app.route("/publications/<title>", methods=["DELETE"])
 def removePublication(title):
+    shutil.rmtree('files/' + title, ignore_errors=True)
+    for f in db.lrange(title + " filenames", 0, 1000000):
+        db.delete(title + f)
+        
+    db.delete(title + " filenames")
     db.delete(title)
     db.lrem("pubnames", 0, title)
     return "Publication is no more", 200
 
-def savePdf(file_to_save):
-
-    path_to_file = "files/" + file_to_save.filename
+def savePdf(file_to_save, title):
+    if not os.path.exists("files/" + title):
+        os.mkdir("files/" + title)
+        print("Directory " , "files/" + title ,  " Created ")
+    path_to_file = "files/" + title + '/' + file_to_save.filename
     file_to_save.save(path_to_file)
-    db.hset(file_to_save.filename, "org_filename", file_to_save.filename)
-    db.hset(file_to_save.filename, "path_to_file", path_to_file)
-    db.lpush("filenames", file_to_save.filename)
+    db.hset(title + '/' + file_to_save.filename, "org_filename", file_to_save.filename)
+    db.hset(title + '/' + file_to_save.filename, "path_to_file", path_to_file)
+    db.lpush(title + " filenames", file_to_save.filename)
 
-def removePdf(name):
-    path_to_file = "files/" + name
+def removePdf(name, title):
+    path_to_file = "files/"+ title + '/' + name
     os.remove(path_to_file)
     db.delete(name)
-    db.lrem("filenames", 0, name)
+    db.lrem(title + " filenames", 0, name)
 
 def checkJwt(token):
     if token == None:
         return False
-    for user in db.lrange('users', 0, 1000000):
-        if user == token['user']:
-            return True
-    return False
+    if dbauth.get(token['user']) == None:
+        return False
+    #for user in db.lrange('users', 0, 1000000):
+    #    if user == token['user']:
+    #        return True
+    return True
 
 if __name__ == "__main__":
 	app.run(host='0.0.0.0', port=80)

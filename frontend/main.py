@@ -34,9 +34,29 @@ def add_pub():
 		r = requests.post(url = URL, json={'title': title, 'author': author, 'publisher': publisher})
 		return redirect(url_for('app_cloud'))
 
-@app.route('/publication/<title>', methods=['GET'])
-def get_pub():
-	return render_template("publicationForm.html")
-	
+@app.route('/publications/<title>', methods=['GET'])
+def get_pub(title):
+	URL = "http://backend/publications/" + title
+	r = requests.get(url = URL) 
+	data = r.json()
+	pub = {
+		"title": data['title'],
+		"author": data["author"],
+		"publisher": data["publisher"]
+	}
+	titleclean = data['title'].replace(" ", "")
+	return render_template("publicationForm.html", links = data["links"], publication = pub, title = titleclean)
+
+#@app.route("/publications/<title>", methods=["POST"])
+#def upload_pdf(title):
+#	URL = "http://backend/publications/" + title
+#	files = {
+#		'name': request.files['pdf'].filename,
+#		
+#	}
+#	r = requests.post(url = URL, files= request.files, json={'filename': )
+#	print(request.files['pdf'].filename)
+#	return redirect(url_for('get_pub', title=title))
+
 if __name__ == "__main__":
 	app.run(host='0.0.0.0', port=80)

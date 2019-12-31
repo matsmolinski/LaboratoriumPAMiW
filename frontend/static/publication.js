@@ -62,10 +62,10 @@ function tryToLogOut() {
 
 }
 
-function getPdf(name) {
+function getPdf(name, title) {
     let anchor = document.createElement("a");
     document.body.appendChild(anchor);
-    let file = 'http://localhost:3030/pdfs/' + name;
+    let file = 'http://localhost:3030/publications/'+ title + '/' + name;
 
     let headers = new Headers();
     headers.append('Authorization', getCookie('jwt'));
@@ -89,8 +89,8 @@ function getPdf(name) {
         .catch(error => document.getElementById('error').innerHTML = error);
 }
 
-function removePdf(name) {
-    let file = 'http://localhost:3030/pdfs/' + name;
+function removePdf(name, title) {
+    let file = 'http://localhost:3030/publications/'+ title + '/' + name;
 
     let headers = new Headers();
     headers.append('Authorization', getCookie('jwt'));
@@ -103,7 +103,7 @@ function removePdf(name) {
             return response.blob();
         } )
         .then(blobby => {
-            window.location.replace("http://localhost:3000/cloud");
+            window.location.replace("http://localhost:3000/publications/" + title);
         })
         .catch(error => document.getElementById('error').innerHTML = error);
 }

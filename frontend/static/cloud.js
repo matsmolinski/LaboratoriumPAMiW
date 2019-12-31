@@ -63,30 +63,9 @@ function tryToLogOut() {
 }
 
 function getPublication(name) {
-    let anchor = document.createElement("a");
-    document.body.appendChild(anchor);
-    let file = 'http://localhost:3000/publications/' + name;
-
-    let headers = new Headers();
-    headers.append('Authorization', getCookie('jwt'));
-
-    fetch(file.replace(/\s/g, ''), { headers, method: 'GET' })
-        .then(response => {
-            if(!response.ok) {
-                throw new Error('JWT authentication failed');
-            }
-            return response.blob();
-        } )
-        .then(blobby => {
-            let objectUrl = window.URL.createObjectURL(blobby);
-
-            anchor.href = objectUrl;
-            anchor.download = name;
-            anchor.click();
-
-            window.URL.revokeObjectURL(objectUrl);
-        })
-        .catch(error => document.getElementById('error').innerHTML = error);
+    let file = 'http://localhost:3000/publications/' + name.replace(/\s/g, '');
+    console.log(file);
+    window.location.replace(file);
 }
 
 function removePublication(name) {

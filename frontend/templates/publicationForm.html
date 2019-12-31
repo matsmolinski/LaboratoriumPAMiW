@@ -4,26 +4,38 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Publication</title>
-    <script type="text/javascript" src="{{ url_for('static', filename='cloud.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='publication.js') }}"></script>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
     <div class="panel">
-        <header><strong>Pdf cloud</strong></header>
+        <header><strong>Publication</strong></header>
         <span id="error" class="error" aria-live="polite"></span>
         <br>
+        <div>
+            <label>Title: </label><label>{{ publication['title'] }}</label>
+        </div>
+        <div>
+            <label>Author: </label><label>{{ publication['author'] }}</label>
+        </div>
+        <div>
+            <label>Publisher: </label><label>{{ publication['publisher'] }}</label>
+        </div>
         <section>
-            <form action = "http://localhost:3030/pdfs" method = "POST" enctype = "multipart/form-data">
+            <form action = "http://localhost:3030/publications/{{title}}" method = "POST" enctype = "multipart/form-data" onsubmit="window.location.reload();">
                 <input id="file" type = "file" name = "pdf" required/>
                 <input type = "submit" value="Add file"/>
             </form>
             <ul>
                 {% for pdf in links %}
-                <li><button type="button" class="linkbutton" onclick="getPdf('{{pdf}}')">{{ pdf }}</button> <button type="button" class="linkbutton" onclick="removePdf('{{pdf}}')"> remove</button></li>
+                <li><button type="button" class="linkbutton" onclick="getPdf('{{pdf}}', '{{title}}')">{{ pdf }}</button> <button type="button" class="linkbutton" onclick="removePdf('{{pdf}}', '{{title}}')"> remove</button></li>
                 {% endfor %}
             </ul>
         </section>
-        <button action="http://localhost:3000/cloud" method="GET" type="button" class="normalbutton">Go back</button>
+        <form action="http://localhost:3000/cloud" method="GET">
+            <button type="submit" class="normalbutton">Go back</button>
+        </form>
+
         <br>
     </div>
 </body>
