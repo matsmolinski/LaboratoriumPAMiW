@@ -18,9 +18,10 @@ function getCookie(cname) {
 
 function checkSession() {
     let sid = getCookie("sessionid");
+
     const promise = new Promise((resolve, reject) => {
         const Http = new XMLHttpRequest();
-        const url='http://localhost:3030/check';
+        const url='http://backendpamiw.herokuapp.com/check';
         Http.open("POST", url);
         Http.onload = () => resolve([Http.response, Http.status]);
         Http.onerror = () => reject(Http.statusText);
@@ -31,7 +32,7 @@ function checkSession() {
             document.cookie = "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
             document.cookie = "sessionid=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
             alert('You are not authorized to use this site');
-            window.location.replace("http://localhost:3000/login");
+            window.location.replace("http://frontendpamiw.herokuapp.com/login");
         }
     }).catch((message) => {
         document.getElementById('error').innerHTML = message;
@@ -46,7 +47,8 @@ function tryToLogOut() {
     user = JSON.stringify(user)
     const promise = new Promise((resolve, reject) => {
         const Http = new XMLHttpRequest();
-        const url='http://localhost:3030/logout';
+        const url='http://backendpamiw.herokuapp.com/logout';
+        Http.setRequestHeader('Authorization', getCookie('jwt'));
         Http.open("POST", url);
         Http.onload = () => resolve([Http.response, Http.status]);
         Http.onerror = () => reject(Http.statusText);
@@ -55,7 +57,7 @@ function tryToLogOut() {
     promise.then((value) => {
         document.cookie = "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
         document.cookie = "sessionid=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-        window.location.replace("http://localhost:3000/login");
+        window.location.replace("http://frontendpamiw.herokuapp.com/login");
     }).catch((message) => {
         document.getElementById('error').innerHTML = message;
     });
@@ -63,13 +65,13 @@ function tryToLogOut() {
 }
 
 function getPublication(name) {
-    let file = 'http://localhost:3000/publications/' + name.replace(/\s/g, '');
+    let file = '/publications/' + name.replace(/\s/g, '');
     console.log(file);
     window.location.replace(file);
 }
 
 function removePublication(name) {
-    let file = 'http://localhost:3030/publications/' + name;
+    let file = 'http://backendpamiw.herokuapp.com/publications/' + name;
 
     let headers = new Headers();
     headers.append('Authorization', getCookie('jwt'));
@@ -82,7 +84,7 @@ function removePublication(name) {
             return response.blob();
         } )
         .then(blobby => {
-            window.location.replace("http://localhost:3000/cloud");
+            window.location.replace("http://frontendpamiw.herokuapp.com/cloud");
         })
         .catch(error => document.getElementById('error').innerHTML = error);
 }

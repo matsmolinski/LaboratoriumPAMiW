@@ -11,7 +11,7 @@ function tryToSubmit() {
     user = JSON.stringify(user);
     const promise = new Promise((resolve, reject) => {
         const Http = new XMLHttpRequest();
-        const url='http://localhost:3030/database';
+        const url='http://backendpamiw.herokuapp.com/database';
         Http.open("POST", url);
         Http.onload = () => resolve(Http.responseText);
         Http.onerror = () => reject(Http.statusText);

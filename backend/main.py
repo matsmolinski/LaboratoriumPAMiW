@@ -17,8 +17,14 @@ def generateKey(stringLength):
 
 app = Flask(__name__)
 CORS(app)
-dbauth = redis.Redis(host = 'redis', port = 6379, decode_responses=True, db = 0)
-db = redis.Redis(host = 'redis', port = 6379, decode_responses=True, db = 1)
+port = int(os.environ.get("PORT", 5000))
+
+#dbauth = redis.Redis(host = 'redis', port = 6379, decode_responses=True, db = 0)
+#db = redis.Redis(host = 'redis', port = 6379, decode_responses=True, db = 1)
+dbauth = redis.from_url(os.environ.get("REDIS_URL"), db = 0)
+db = redis.from_url(os.environ.get("REDIS_URL"), db = 1)
+dbauth.flushall()
+db.flushall()
 secret_key = generateKey(20)
 #app.config["JWT_SECRET_KEY"] = generateKey(20)
 #app.config["JWT_ACCESS_TOKEN_EXPIRES"] = 300
@@ -48,7 +54,7 @@ def isLoginInDatabase(login):
     return True
 
 def checkPassword(user):
-    if db.hget(user["name"], "password") == user['password']:
+    if db.hget(user["name"], "password").decode("utf-8") == user['password']:
         return True
     return False
     
@@ -80,7 +86,7 @@ def tryToLogIn():
         if isLoginInDatabase(user["name"]):
             if checkPassword(user):
                 sessionid = generateKey(10)
-                dbauth.set(sessionid, 1, ex = 300)
+                dbauth.set(sessionid, user["name"], ex = 300)
                 #access_token = create_access_token(identity = user["name"])
                 access_token = jwt.encode({'user': sessionid}, secret_key, algorithm='HS256')
                 db.lpush('users', sessionid)
@@ -104,6 +110,12 @@ def tryToLogIn():
 @app.route('/logout', methods=['POST'])
 def tryToLogOut():
     try:
+        jwtek = request.headers.get('Authorization')
+        decoded = jwt.decode(jwtek.encode(), secret_key, algorithms='HS256')
+
+        if not checkJwt(decoded):
+            return 'JWT authentication failed', 400
+            
         user = json.loads(request.data)
         dbauth.delete(user["sessionid"])
         #db.lrem('users', 0, user["sessionid"])
@@ -125,13 +137,13 @@ def checkIfLoggedIn():
         print(e, file = sys.stderr)
         return Response("Failed to read request", 400)
 
-@app.route('/pdfs/list', methods=['GET'])
-def getPdfList():
-    files = db.lrange('filenames', 0, 1000000)
-    message = {
-        "links": files
-    }
-    return Response(json.dumps(message), 200)
+#@app.route('/pdfs/list', methods=['GET'])
+#def getPdfList():
+ #   files = db.lrange('filenames', 0, 1000000)
+  #  message = {
+   #     "links": files
+    #}
+    #return Response(json.dumps(message), 200)
 
 @app.route("/publications/<title>", methods=["POST"])
 def uploadPdf(title):
@@ -152,8 +164,8 @@ def downloadDeletePdf(title, name):
         if not checkJwt(decoded):
             return 'JWT authentication failed', 400
 
-        full_name = db.hget(title + '/' + name, "path_to_file")
-        org_filename = db.hget(title + '/' + name, "org_filename")
+        full_name = db.hget(title + '/' + name, "path_to_file").decode("utf-8")
+        org_filename = db.hget(title + '/' + name, "org_filename").decode("utf-8")
         print(title)
         print(name)
         if(full_name != None):
@@ -175,6 +187,12 @@ def downloadDeletePdf(title, name):
 @app.route("/publications", methods=["POST"])
 def addPublication():
     try:
+        jwtek = request.headers.get('Authorization')
+        decoded = jwt.decode(jwtek.encode(), secret_key, algorithms='HS256')
+
+        if not checkJwt(decoded):
+            return 'JWT authentication failed', 400
+
         title = request.get_json()['title'].replace(" ", "")
         db.hset(title, 'title', request.get_json()['title'])
         db.hset(title, 'author', request.get_json()['author'])
@@ -187,26 +205,55 @@ def addPublication():
 
 @app.route("/publications", methods=["GET"])
 def getPublications():
+    jwtek = request.headers.get('Authorization')
+    decoded = jwt.decode(jwtek.encode(), secret_key, algorithms='HS256')
+
+    if not checkJwt(decoded):
+        return 'JWT authentication failed', 400
+
     files = db.lrange('pubnames', 0, 1000000)
+    proper_files = []
+    for fil in files:
+        proper_files.append(fil.decode("utf-8"))
     message = {
-        "links": files
+        "links": proper_files
     }
     return Response(json.dumps(message), 200)
 
 @app.route("/publications/<title>", methods=["GET"])
 def getPublication(title):
+    jwtek = request.headers.get('Authorization')
+    decoded = jwt.decode(jwtek.encode(), secret_key, algorithms='HS256')
+
+    if not checkJwt(decoded):
+        return 'JWT authentication failed', 400
+
+    files = db.lrange(title + " filenames", 0, 100000)
+    proper_files = []
+    for fil in files:
+        proper_files.append(fil.decode("utf-8"))
     message = {
-        "title": db.hget(title, 'title'),
-        "author": db.hget(title, 'author'),
-        "publisher": db.hget(title, 'publisher'),
-        "links": db.lrange(title + " filenames", 0, 100000)
+        "title": db.hget(title, 'title').decode("utf-8"),
+        "author": db.hget(title, 'author').decode("utf-8"),
+        "publisher": db.hget(title, 'publisher').decode("utf-8"),
+        "links": proper_files
     }
     return Response(json.dumps(message), 200)
 
 @app.route("/publications/<title>", methods=["DELETE"])
 def removePublication(title):
+    jwtek = request.headers.get('Authorization')
+    decoded = jwt.decode(jwtek.encode(), secret_key, algorithms='HS256')
+
+    if not checkJwt(decoded):
+        return 'JWT authentication failed', 400
+
+    files = db.lrange(title + " filenames", 0, 1000000)
+    proper_files = []
+    for fil in files:
+        proper_files.append(fil.decode("utf-8"))
     shutil.rmtree('files/' + title, ignore_errors=True)
-    for f in db.lrange(title + " filenames", 0, 1000000):
+    for f in proper_files:
         db.delete(title + f)
         
     db.delete(title + " filenames")
@@ -241,4 +288,4 @@ def checkJwt(token):
     return True
 
 if __name__ == "__main__":
-	app.run(host='0.0.0.0', port=80)
+	app.run(host='0.0.0.0', port=port)

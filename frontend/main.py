@@ -1,8 +1,9 @@
 from flask import Flask, Blueprint, request, Response, render_template, url_for, redirect
 import requests
 import json
+import os
 app = Flask(__name__)
-
+port = int(os.environ.get("PORT", 5000))
 @app.route('/', methods=['GET'])
 def app_default():
 	return render_template("registrationForm.html")
@@ -17,8 +18,8 @@ def app_login():
 
 @app.route('/cloud/', methods=['GET'])
 def app_cloud():
-	URL = "http://backend/publications" 
-	r = requests.get(url = URL) 
+	URL = "http://backendpamiw.herokuapp.com/publications" 
+	r = requests.get(url = URL, headers={"Authorization": request.cookies.get("jwt")}) 
 	data = r.json()
 	return render_template("cloudForm.html", links = data["links"])
 
@@ -30,14 +31,14 @@ def add_pub():
 		title = request.form['title']
 		author = request.form['author']
 		publisher = request.form['publisher']
-		URL = "http://backend/publications" 
-		r = requests.post(url = URL, json={'title': title, 'author': author, 'publisher': publisher})
+		URL = "http://backendpamiw.herokuapp.com/publications" 
+		r = requests.post(url = URL, json={'title': title, 'author': author, 'publisher': publisher}, headers={"Authorization": request.cookies.get("jwt")})
 		return redirect(url_for('app_cloud'))
 
 @app.route('/publications/<title>', methods=['GET'])
 def get_pub(title):
-	URL = "http://backend/publications/" + title
-	r = requests.get(url = URL) 
+	URL = "http://backendpamiw.herokuapp.com/publications/" + title
+	r = requests.get(url = URL, headers={"Authorization": request.cookies.get("jwt")}) 
 	data = r.json()
 	pub = {
 		"title": data['title'],
@@ -59,4 +60,4 @@ def get_pub(title):
 #	return redirect(url_for('get_pub', title=title))
 
 if __name__ == "__main__":
-	app.run(host='0.0.0.0', port=80)
+	app.run(host='0.0.0.0', port=port)
