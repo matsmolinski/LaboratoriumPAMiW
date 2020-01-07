@@ -22,9 +22,9 @@
             <label>Publisher: </label><label>{{ publication['publisher'] }}</label>
         </div>
         <section>
-            <form action = "http://backendpamiw.herokuapp.com/publications/{{title}}" method = "POST" enctype = "multipart/form-data" onsubmit="window.location.reload();">
+            <form action = "http://backendpamiw.herokuapp.com/publications/{{title}}" method = "POST" enctype = "multipart/form-data">
                 <input id="file" type = "file" name = "file" required/>
-                <input type = "submit" value="Add file"/>
+                <button type = "submit" value="Add file" onclick="sendFile('{{title}}')">Send</button>
             </form>
             <ul>
                 {% for pdf in links %}

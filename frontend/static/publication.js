@@ -108,4 +108,20 @@ function removePdf(name, title) {
         .catch(error => document.getElementById('error').innerHTML = error);
 }
 
+function sendFile(title) {
+    let url = 'http://backendpamiw.herokuapp.com/publications/'+ title;
+    var files = document.getElementById("file");
+    let file = files.files[0];
+    let headers = new Headers();
+    headers.append('Authorization', getCookie('jwt'));
+    headers.append("Content-Type", "multipart/form-data");
+    fetch(url, { headers, method: 'POST', body: file})
+        .then(response => {
+            if(!response.ok) {
+                throw new Error('JWT authentication failed');
+            }
+            window.location.replace("http://frontendpamiw.herokuapp.com/publications/" + title)
+        } )
+        .catch(error => document.getElementById('error').innerHTML = error);
+}
 window.onload = checkSession;

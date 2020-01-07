@@ -45,6 +45,20 @@ function tryToLogOut() {
         sessionid: getCookie("sessionid")
     }
     user = JSON.stringify(user)
+    const url='http://backendpamiw.herokuapp.com/logout'
+    let headers = new Headers();
+    headers.append('Authorization', getCookie('jwt'));
+    fetch(url, { headers, method: 'DELETE', body: user})
+        .then(response => {
+            document.cookie = "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+            document.cookie = "sessionid=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+            window.location.replace("http://frontendpamiw.herokuapp.com/login"); 
+        })
+        .catch((message) => {
+            document.getElementById('error').innerHTML = message;
+            window.location.replace("http://frontendpamiw.herokuapp.com/login");
+        })
+/*
     const promise = new Promise((resolve, reject) => {
         const Http = new XMLHttpRequest();
         const url='http://backendpamiw.herokuapp.com/logout';     
@@ -62,7 +76,7 @@ function tryToLogOut() {
         document.getElementById('error').innerHTML = message;
         window.location.replace("http://frontendpamiw.herokuapp.com/login");
     });
-
+*/
 }
 
 function getPublication(name) {

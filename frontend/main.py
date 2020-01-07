@@ -2,6 +2,7 @@ from flask import Flask, Blueprint, request, Response, render_template, url_for,
 import requests
 import json
 import os
+import sys
 app = Flask(__name__)
 port = int(os.environ.get("PORT", 5000))
 @app.route('/', methods=['GET'])
@@ -18,10 +19,15 @@ def app_login():
 
 @app.route('/cloud/', methods=['GET'])
 def app_cloud():
-	URL = "http://backendpamiw.herokuapp.com/publications" 
-	r = requests.get(url = URL, headers={"Authorization": request.cookies.get("jwt")}) 
-	data = r.json()
-	return render_template("cloudForm.html", links = data["links"])
+	try:
+		URL = "http://backendpamiw.herokuapp.com/publications" 
+		r = requests.get(url = URL, headers={"Authorization": request.cookies.get("jwt")}) 
+		data = r.json()
+		return render_template("cloudForm.html", links = data["links"])
+	except Exception as e:
+		print(e, file = sys.stderr)
+		return render_template("loginForm.html")
+	
 
 @app.route('/add-publication/', methods=['GET', 'POST'])
 def add_pub():
@@ -37,17 +43,20 @@ def add_pub():
 
 @app.route('/publications/<title>', methods=['GET'])
 def get_pub(title):
-	URL = "http://backendpamiw.herokuapp.com/publications/" + title
-	r = requests.get(url = URL, headers={"Authorization": request.cookies.get("jwt")}) 
-	data = r.json()
-	pub = {
-		"title": data['title'],
-		"author": data["author"],
-		"publisher": data["publisher"]
-	}
-	titleclean = data['title'].replace(" ", "")
-	return render_template("publicationForm.html", links = data["links"], publication = pub, title = titleclean)
-
+	try:
+		URL = "http://backendpamiw.herokuapp.com/publications/" + title
+		r = requests.get(url = URL, headers={"Authorization": request.cookies.get("jwt")}) 
+		data = r.json()
+		pub = {
+			"title": data['title'],
+			"author": data["author"],
+			"publisher": data["publisher"]
+		}
+		titleclean = data['title'].replace(" ", "")
+		return render_template("publicationForm.html", links = data["links"], publication = pub, title = titleclean)
+	except Exception as e:
+		print(e, file = sys.stderr)
+		return render_template("loginForm.html")
 #@app.route("/publications/<title>", methods=["POST"])
 #def upload_pdf(title):
 #	URL = "http://backend/publications/" + title
