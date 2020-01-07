@@ -8,8 +8,14 @@ const Profile = ({ navigation: { navigate } }) => {
 
     const _signOutAsync = async () => {
         setLoading(true)
+        const token = await AsyncStorage.getItem('jwt')
+        const session = await AsyncStorage.getItem('sessionid')
+        await fetch('https://backendpamiw.herokuapp.com/logout', { 
+            method: 'DELETE',
+            headers: {'Authorization': token},
+            body:  JSON.stringify({'sessionid': session})}
+            )
         await AsyncStorage.clear()
-        await fetch('https://pamw-backend.herokuapp.com/api/user/logout', { method: 'DELETE' })
         navigate('Auth')
     }
     
@@ -29,7 +35,7 @@ const Profile = ({ navigation: { navigate } }) => {
 
 Profile.navigationOptions = {
     tabBarIcon: () => (
-        <Icon type="antdesign" name="user" size={20} />
+        <Icon type="antdesign" name="logout" size={20} />
     )
 }
 

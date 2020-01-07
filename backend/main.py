@@ -62,7 +62,7 @@ def checkPassword(user):
 def send_static(path):
     return send_from_directory('static', path)
 
-@app.route('/database', methods=['POST'])
+@app.route('/register', methods=['POST'])
 def tryToAddLogin():
     try:
         user = json.loads(request.data)
@@ -107,7 +107,7 @@ def tryToLogIn():
         return Response("Failed to read request", 400)
     
 
-@app.route('/logout', methods=['POST'])
+@app.route('/logout', methods=['DELETE'])
 def tryToLogOut():
     try:
         jwtek = request.headers.get('Authorization')
@@ -148,7 +148,9 @@ def checkIfLoggedIn():
 @app.route("/publications/<title>", methods=["POST"])
 def uploadPdf(title):
     try:
-        f = request.files["pdf"]
+        print(request.data, file = sys.stderr)
+        print(request.files, file = sys.stderr)
+        f = request.files['file']
         savePdf(f, title)
         return "ok", 200
     except Exception as e:
@@ -193,10 +195,12 @@ def addPublication():
         if not checkJwt(decoded):
             return 'JWT authentication failed', 400
 
-        title = request.get_json()['title'].replace(" ", "")
-        db.hset(title, 'title', request.get_json()['title'])
-        db.hset(title, 'author', request.get_json()['author'])
-        db.hset(title, 'publisher', request.get_json()['publisher'])
+        print(request.get_json(), file=sys.stderr)
+        pub = json.loads(request.data)
+        title = pub['title'].replace(" ", "")
+        db.hset(title, 'title', pub['title'])
+        db.hset(title, 'author', pub['author'])
+        db.hset(title, 'publisher', pub['publisher'])
         db.lpush('pubnames', title)
         return "ok", 200
     except Exception as e:
@@ -205,20 +209,24 @@ def addPublication():
 
 @app.route("/publications", methods=["GET"])
 def getPublications():
-    jwtek = request.headers.get('Authorization')
-    decoded = jwt.decode(jwtek.encode(), secret_key, algorithms='HS256')
+    try:
+        jwtek = request.headers.get('Authorization')
+        decoded = jwt.decode(jwtek.encode(), secret_key, algorithms='HS256')
 
-    if not checkJwt(decoded):
-        return 'JWT authentication failed', 400
+        if not checkJwt(decoded):
+            return 'JWT authentication failed', 400
 
-    files = db.lrange('pubnames', 0, 1000000)
-    proper_files = []
-    for fil in files:
-        proper_files.append(fil.decode("utf-8"))
-    message = {
-        "links": proper_files
-    }
-    return Response(json.dumps(message), 200)
+        files = db.lrange('pubnames', 0, 1000000)
+        proper_files = []
+        for fil in files:
+            proper_files.append(fil.decode("utf-8"))
+        message = {
+            "links": proper_files
+        }
+        return Response(json.dumps(message), 200)
+    except Exception as e:
+        print(e, file = sys.stderr)
+        return Response("Failed to read request", 400)
 
 @app.route("/publications/<title>", methods=["GET"])
 def getPublication(title):

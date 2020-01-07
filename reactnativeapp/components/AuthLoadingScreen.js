@@ -9,8 +9,16 @@ import {
 
 export default ({ navigation: { navigate } }) => {
     const _bootstrapAsync = async () => {
-        const accessToken = await AsyncStorage.getItem('accessToken')
-        navigate(accessToken ? 'App' : 'Auth')
+        const sessionid = await AsyncStorage.getItem('sessionid')
+        const response = await fetch('http://backendpamiw.herokuapp.com/check', {
+                method: 'POST',
+                body: sessionid
+        })
+        let authorized = false
+        if (response.status === 200) {
+            authorized = true
+        }
+        navigate(authorized ? 'App' : 'Auth')
     }
 
     useEffect(() => {

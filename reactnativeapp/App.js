@@ -1,14 +1,14 @@
 import React from 'react'
 import { StatusBar } from 'react-native'
 import { createAppContainer, createSwitchNavigator } from 'react-navigation'
-import { HomeScreen, LoginScreen, ProfileScreen, AuthLoadingScreen, FilesScreen } from './components'
+import { HomeScreen, LoginScreen, ProfileScreen, AuthLoadingScreen, FilesScreen, RegistrationScreen } from './components'
 import { ThemeProvider } from 'react-native-elements'
 import { createBottomTabNavigator } from 'react-navigation-tabs'
 import { createStackNavigator } from 'react-navigation-stack'
 
-const AppBottomTab = createBottomTabNavigator({ Home: HomeScreen, Files: FilesScreen, Profile: ProfileScreen })
-const AuthStack = createStackNavigator({ Login: LoginScreen }, { headerMode: 'none' })
-
+const AppBottomTab = createBottomTabNavigator({ Home: HomeScreen, Publications: FilesScreen, Profile: ProfileScreen })
+const AuthStack = createBottomTabNavigator({ Login: LoginScreen, Registration: RegistrationScreen })
+//headerMode: 'none'
 const RootStack = createSwitchNavigator(
   { 
     AuthLoading: AuthLoadingScreen,

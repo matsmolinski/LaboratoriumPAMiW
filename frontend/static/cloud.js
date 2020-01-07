@@ -49,7 +49,7 @@ function tryToLogOut() {
         const Http = new XMLHttpRequest();
         const url='http://backendpamiw.herokuapp.com/logout';
         Http.setRequestHeader('Authorization', getCookie('jwt'));
-        Http.open("POST", url);
+        Http.open("DELETE", url);
         Http.onload = () => resolve([Http.response, Http.status]);
         Http.onerror = () => reject(Http.statusText);
         Http.send(user);
@@ -60,6 +60,7 @@ function tryToLogOut() {
         window.location.replace("http://frontendpamiw.herokuapp.com/login");
     }).catch((message) => {
         document.getElementById('error').innerHTML = message;
+        window.location.replace("http://frontendpamiw.herokuapp.com/login");
     });
 
 }
