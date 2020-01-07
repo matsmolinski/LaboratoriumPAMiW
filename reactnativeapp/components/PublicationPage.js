@@ -4,13 +4,13 @@ import styles from '../assets/styles'
 import * as DocumentPicker from 'expo-document-picker'
 import { Button, Input, Text, Icon } from 'react-native-elements'
 import { Formik } from 'formik'
-import {RNFetchBlob} from 'rn-fetch-blob'
+import * as FileSystem from 'expo-file-system';
+import * as MediaLibrary from 'expo-media-library';
 
-const FilesScreen = ({ navigation: { navigate } }) => {
+const PublicationPage = ({ navigation: { navigate } }) => {
     const [publications, setPublications] = useState([])
     const [publicationData, setPublicationData] = useState({})
     const [view, setView] = useState('publications')
-    const [files, setFiles] = useState([])
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
 
@@ -38,7 +38,7 @@ const FilesScreen = ({ navigation: { navigate } }) => {
         })()
     }, [])
 
-    const _pickDocument = async () => {
+    const uploadFile = async () => {
 	    const result = await DocumentPicker.getDocumentAsync({})
 
         if (result.type === 'cancel') return
@@ -49,11 +49,9 @@ const FilesScreen = ({ navigation: { navigate } }) => {
             type: '*/*',
             name: result.name
         })
-
-        //if (files.filter(file => file.name === data.name).length === 0) setFiles(prev => prev.concat(data))
         const token = await AsyncStorage.getItem('jwt')
         try {
-            const response = await fetch(`http://backendpamiw.herokuapp.com/publications/` + view, {
+            let response = await fetch(`http://backendpamiw.herokuapp.com/publications/` + view, {
                 method: 'POST',
                 headers: {
                     "Content-Type": "multipart/form-data",
@@ -62,6 +60,16 @@ const FilesScreen = ({ navigation: { navigate } }) => {
                 body: formData
             })
             .then(setView(view))
+            response = await fetch(`http://backendpamiw.herokuapp.com/publications/` + view, {
+            method: 'GET',
+            headers: {
+                'Authorization': token
+            }
+        })
+        const data = await response.json()
+        setPublicationData(data)
+
+
         } catch(err) {
             console.log(err)
         }
@@ -103,30 +111,58 @@ const FilesScreen = ({ navigation: { navigate } }) => {
         }
     }
     
-    const removePublication = (pub) => {
-        console.log("in preparation")
+    const removePublication = async (pub) => {
+        console.log(pub)
+        const token = await AsyncStorage.getItem('jwt')
+        let response = await fetch(`http://backendpamiw.herokuapp.com/publications/` + pub, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': token
+            }
+        })
+        if (response.ok) {
+            response = await fetch(`http://backendpamiw.herokuapp.com/publications`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': token
+                }
+            })
+            const data = await response.json()
+            setPublications(data['links'])
+            setView('publications')
+        }
     }
 
-    const getFile = async (file) => {
-        console.log("in preparation")
-        const { config, fs } = RNFetchBlob
-        let PictureDir = fs.dirs.PictureDir // this is the pictures directory. You can check the available directories in the wiki.
-        let options = {
-            fileCache: true,
-            addAndroidDownloads : {
-                useDownloadManager : true, // setting it to true will use the device's native download manager and will be shown in the notification bar.
-                notification : false,
-                path:  PictureDir + "/me_"+Math.floor(date.getTime() + date.getSeconds() / 2), // this is the path where your downloaded file will live in
-                description : 'Downloading image.'
-            }
-        }
-        config(options).fetch('GET', "http://backendpamiw.herokuapp.com/publications/" + view + "/" + file).then((res) => {
-        // do some magic here
-})
+    const getFile = async (file) => {  
+        const token = await AsyncStorage.getItem('jwt')   
+        FileSystem.downloadAsync("http://backendpamiw.herokuapp.com/publications/" + view + "/" + file, FileSystem.documentDirectory + file, {'Authorization' : token})
+        .then(({ uri }) => {
+            console.log('Finished downloading to ', uri);
+            //MediaLibrary.saveToLibraryAsync(uri)
+        })
     }
 
     const removeFile = async (file) => {
-        console.log("in preparation")
+        console.log(file)
+        const token = await AsyncStorage.getItem('jwt')
+        let response = await fetch(`http://backendpamiw.herokuapp.com/publications/` + view + '/' + file, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': token
+            }
+        })
+        if (response.ok) {
+            response = await fetch(`http://backendpamiw.herokuapp.com/publications/` + view, {
+                method: 'GET',
+                headers: {
+                    'Authorization': token
+                }
+            })
+            const data = await response.json()
+            setPublicationData(data)
+        }
+        
+
     }
 
     const openPublication = async (pub) => {
@@ -139,8 +175,6 @@ const FilesScreen = ({ navigation: { navigate } }) => {
             }
         })
         const data = await response.json()
-        console.log(data)
-        console.log(data['links'])
         setPublicationData(data)
         setView(pub)
     }
@@ -153,14 +187,15 @@ const FilesScreen = ({ navigation: { navigate } }) => {
                         reverse
                         type="antdesign"
                         name="plus"
-                        color="blue"
+                        color="#00aeef"
                         onPress={() => {setView('addpub')}}
                     />
                 </View>
                 <Text h3>Publications:</Text>
                 {publications.map((pub, index) => (
-                    <View>
+                    <View style={styles.buttonSeriesContainer}>
                     <Button
+                        style={styles.buttonSeries}
                         key={index}
                         title={pub}
                         onPress={() => {openPublication(pub)}} 
@@ -168,9 +203,9 @@ const FilesScreen = ({ navigation: { navigate } }) => {
                     <Icon 
                         key={index + 100000} 
                         type="antdesign" 
-                        name="folder1" 
+                        name="delete" 
                         size={50} 
-                        onPress={(file) => {removeFile(file)}}
+                        onPress={() => {removePublication(pub)}}
                     />
                     </View>
                 ))}
@@ -229,6 +264,7 @@ const FilesScreen = ({ navigation: { navigate } }) => {
                                     title="Submit" 
                                     loading={loading}
                                     onPress={handleSubmit} 
+                                    buttonStyle={styles.button}
                                 />
                             </View>
 
@@ -236,6 +272,7 @@ const FilesScreen = ({ navigation: { navigate } }) => {
                                 <Button
                                     title="Cancel" 
                                     onPress={() => {setView('publications')}} 
+                                    buttonStyle={styles.button}
                                 />
                             </View>
                         </View>
@@ -250,8 +287,8 @@ const FilesScreen = ({ navigation: { navigate } }) => {
                     reverse
                     type="antdesign"
                     name="plus"
-                    color="blue"
-                    onPress={_pickDocument}
+                    color="#00aeef"
+                    onPress={uploadFile}
                 />
             </View>
             <Text h3>Publication:</Text>
@@ -259,8 +296,9 @@ const FilesScreen = ({ navigation: { navigate } }) => {
             <Text>Author: {publicationData['author']}</Text>
             <Text>Publisher: {publicationData['publisher']}</Text>
             {publicationData['links'].map((file, index) => (
-                <View>
+                <View style={styles.buttonSeriesContainer}>
                 <Button
+                    style={styles.buttonSeries}
                     key={index}
                     title={file}
                     onPress={() => {getFile(file)}} 
@@ -268,9 +306,9 @@ const FilesScreen = ({ navigation: { navigate } }) => {
                 <Icon 
                     key={index + 100000} 
                     type="antdesign" 
-                    name="folder1" 
+                    name="delete" 
                     size={50} 
-                    onPress={(file) => {removeFile(file)}}
+                    onPress={() => {removeFile(file)}}
                 />
                 </View>
             ))}
@@ -278,6 +316,7 @@ const FilesScreen = ({ navigation: { navigate } }) => {
                 <Button
                     title="Cancel" 
                     onPress={() => {setView('publications')}} 
+                    buttonStyle={styles.button}
                 />
             </View>
         </View>
@@ -285,10 +324,10 @@ const FilesScreen = ({ navigation: { navigate } }) => {
    
 }
 
-FilesScreen.navigationOptions = () => ({
+PublicationPage.navigationOptions = () => ({
     tabBarIcon: () => (
         <Icon type="antdesign" name="folder1" size={20} />
     )
 })
 
-export default FilesScreen
+export default PublicationPage

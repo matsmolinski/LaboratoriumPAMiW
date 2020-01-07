@@ -8,7 +8,7 @@ import {
 } from 'react-native'
 
 export default ({ navigation: { navigate } }) => {
-    const _bootstrapAsync = async () => {
+    const checkSession = async () => {
         const sessionid = await AsyncStorage.getItem('sessionid')
         const response = await fetch('http://backendpamiw.herokuapp.com/check', {
                 method: 'POST',
@@ -18,11 +18,11 @@ export default ({ navigation: { navigate } }) => {
         if (response.status === 200) {
             authorized = true
         }
-        navigate(authorized ? 'App' : 'Auth')
+        navigate(authorized ? 'Cloud' : 'Auth')
     }
 
     useEffect(() => {
-        _bootstrapAsync()
+        checkSession()
     }, [])
 
     return (

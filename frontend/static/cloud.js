@@ -47,9 +47,9 @@ function tryToLogOut() {
     user = JSON.stringify(user)
     const promise = new Promise((resolve, reject) => {
         const Http = new XMLHttpRequest();
-        const url='http://backendpamiw.herokuapp.com/logout';
-        Http.setRequestHeader('Authorization', getCookie('jwt'));
+        const url='http://backendpamiw.herokuapp.com/logout';     
         Http.open("DELETE", url);
+        Http.setRequestHeader('Authorization', getCookie('jwt'));
         Http.onload = () => resolve([Http.response, Http.status]);
         Http.onerror = () => reject(Http.statusText);
         Http.send(user);

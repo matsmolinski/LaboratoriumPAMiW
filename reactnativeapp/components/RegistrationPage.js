@@ -10,7 +10,7 @@ const Registration = ({ navigation: { navigate } }) => {
     const [passError, setPassError] = useState('')
     const [loading, setLoading] = useState(false)
 
-    const _signInAsync = async values => {
+    const register = async values => {
         
         let ret = false
         if (values.password !== values.rpassword) {
@@ -98,7 +98,7 @@ const Registration = ({ navigation: { navigate } }) => {
                 password: '',
                 rpassword: ''
             }}
-            onSubmit={values => _signInAsync(values)}
+            onSubmit={values => register(values)}
         >
             {({ handleChange, handleBlur, handleSubmit, values }) => (
                 <View style={styles.container}>
@@ -155,7 +155,8 @@ const Registration = ({ navigation: { navigate } }) => {
                         <Button
                             title="Submit" 
                             loading={loading}
-                            onPress={handleSubmit} 
+                            onPress={handleSubmit}
+                            buttonStyle={styles.button}
                         />
                     </View>
                 </View>

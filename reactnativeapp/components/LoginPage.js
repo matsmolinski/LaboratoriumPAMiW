@@ -8,7 +8,7 @@ const Login = ({ navigation: { navigate } }) => {
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
 
-    const _signInAsync = async values => {
+    const logIn = async values => {
         setLoading(true)
         const response = await fetch('http://backendpamiw.herokuapp.com/login', {
                 method: 'POST',
@@ -23,7 +23,7 @@ const Login = ({ navigation: { navigate } }) => {
             const data = await response.json()
             await AsyncStorage.setItem('sessionid', data.sessionid)
             await AsyncStorage.setItem('jwt', data.jwt)
-            navigate('App')
+            navigate('Cloud')
         } else {
             setLoading(false)
             response.text().then(function (text) {
@@ -38,28 +38,28 @@ const Login = ({ navigation: { navigate } }) => {
                 name: '',
                 password: ''
             }}
-            onSubmit={values => _signInAsync(values)}
+            onSubmit={values => logIn(values)}
         >
             {({ handleChange, handleBlur, handleSubmit, values }) => (
                 <View style={styles.container}>
                     <View style={{ marginBottom: 20 }}>
-                        <Text h1>Log In</Text>
+                        <Text h1>Sign in</Text>
                     </View>
 
                     <View style={styles.inputContainer}>
                         <Input
-                            placeholder="Login"
+                            placeholder="Enter login"
                             onChangeText={handleChange('name')}
                             onBlur={handleBlur('name')}
                             value={values.name}
-                            label="Your login"
+                            label="Login"
                             errorMessage={error}
                         />
                     </View>
 
                     <View style={styles.inputContainer}>
                         <Input 
-                            placeholder="Password"
+                            placeholder="Enter password"
                             onChangeText={handleChange('password')}
                             onBlur={handleBlur('password')}
                             value={values.password}
@@ -73,6 +73,7 @@ const Login = ({ navigation: { navigate } }) => {
                             title="Submit" 
                             loading={loading}
                             onPress={handleSubmit} 
+                            buttonStyle={styles.button}
                         />
                     </View>
                 </View>
