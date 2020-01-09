@@ -17,8 +17,8 @@
                 <button class="normalbutton" type = "submit">Add publication</button>
             </form>
             <ul>
-                {% for publication in links %}
-                <li><button type="button" class="linkbutton" onclick="getPublication('{{publication}}')">{{ publication }}</button> <button type="button" class="linkbutton" onclick="removePublication('{{publication}}')"> remove</button></li>
+                {%for i in range(0, length)%} 
+                <li><button type="button" class="linkbutton" onclick="getPublication('{{links[i]}}')">{{ names[i] }}</button> <button type="button" class="linkbutton" onclick="removePublication('{{links[i]}}')"> remove</button></li>
                 {% endfor %}
             </ul>
         </section>

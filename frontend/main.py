@@ -23,7 +23,8 @@ def app_cloud():
 		URL = "http://backendpamiw.herokuapp.com/publications" 
 		r = requests.get(url = URL, headers={"Authorization": request.cookies.get("jwt")}) 
 		data = r.json()
-		return render_template("cloudForm.html", links = data["links"])
+		print(data, file=sys.stderr)
+		return render_template("cloudForm.html", links = data["links"], names= data["names"], length=len(data['links']))
 	except Exception as e:
 		print(e, file = sys.stderr)
 		return render_template("loginForm.html")
@@ -45,8 +46,11 @@ def add_pub():
 def get_pub(title):
 	try:
 		URL = "http://backendpamiw.herokuapp.com/publications/" + title
-		r = requests.get(url = URL, headers={"Authorization": request.cookies.get("jwt")}) 
+		r = requests.get(url = URL, headers={"Authorization": request.cookies.get("jwt")})
+		if not r.ok:
+			return render_template("loginForm.html")
 		data = r.json()
+		print(data, file=sys.stderr)
 		pub = {
 			"title": data['title'],
 			"author": data["author"],
@@ -57,16 +61,14 @@ def get_pub(title):
 	except Exception as e:
 		print(e, file = sys.stderr)
 		return render_template("loginForm.html")
-#@app.route("/publications/<title>", methods=["POST"])
-#def upload_pdf(title):
-#	URL = "http://backend/publications/" + title
-#	files = {
-#		'name': request.files['pdf'].filename,
-#		
-#	}
-#	r = requests.post(url = URL, files= request.files, json={'filename': )
-#	print(request.files['pdf'].filename)
-#	return redirect(url_for('get_pub', title=title))
+@app.route("/publications/<title>", methods=["POST"])
+def upload_pdf(title):
+	file = request.files.get('file')
+	URL = "http://backendpamiw.herokuapp.com/publications/" + title
+	files = {'file': (file.filename, file, 'application/pdf')}
+	r = requests.post(url = URL, files=files, headers={"Authorization": request.cookies.get("jwt")} )
+	if r.ok:
+		return redirect(url_for('get_pub', title=title))
 
 if __name__ == "__main__":
 	app.run(host='0.0.0.0', port=port)
