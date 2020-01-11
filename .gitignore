@@ -2,3 +2,4 @@ backend/__pycache__/
 frontend/__pycache__/
 node_modules
 reactnativeapp/node_modules
+.idea

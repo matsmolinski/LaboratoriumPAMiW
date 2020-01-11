@@ -9,6 +9,8 @@ import json
 import random
 import string
 import shutil
+import time
+from flask_socketio import SocketIO, join_room, leave_room, emit, send
 
 def generateKey(stringLength):
     characters = string.ascii_letters + string.digits
@@ -16,6 +18,9 @@ def generateKey(stringLength):
 
 app = Flask(__name__)
 CORS(app)
+socket_io = SocketIO(app, cors_allowed_origins="*")
+
+
 port = int(os.environ.get("PORT", 5000))
 
 #dbauth = redis.Redis(host = 'redis', port = 6379, decode_responses=True, db = 0)
@@ -137,8 +142,6 @@ def uploadPdf(title):
         if not checkJwt(decoded):
             return 'JWT authentication failed', 400
 
-        print(request.data, file = sys.stderr)
-        print(request.files, file = sys.stderr)
         f = request.files['file']
         if savePdf(f, title):
             return "ok", 200
@@ -198,9 +201,10 @@ def addPublication():
         db.hset(title, 'publisher', pub['publisher'])
         db.hset(title, 'owner', username)
         db.lpush('pubnames', title)
+        socket_io.emit('publication added', 'Pub added', broadcast=True)
         return "ok", 200
     except Exception as e:
-        print(e, file = sys.stderr)
+        print(e, flush=True)
         return Response("Failed to read request", 400)
 
 @app.route("/publications", methods=["GET"])
@@ -308,4 +312,4 @@ def checkJwt(token):
     return True
 
 if __name__ == "__main__":
-	app.run(host='0.0.0.0', port=port)
+	socket_io.run(app, host='0.0.0.0', port=port)

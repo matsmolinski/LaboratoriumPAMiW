@@ -1,4 +1,16 @@
+document.addEventListener("DOMContentLoaded", function (event) {
 
+    var ws_uri = "http://backendpamiw.herokuapp.com/";
+
+    var socket = io.connect(ws_uri);
+    socket.on("publication added", function (message) {
+        document.getElementById('error').innerHTML = message;
+        document.getElementById('error').className = 'success';
+        setTimeout(function() {
+            window.location.replace("http://frontendpamiw.herokuapp.com/cloud");
+          }, 1000);      
+    });
+});
 
 function getCookie(cname) {
     var name = cname + "=";

@@ -14,6 +14,8 @@ const PublicationPage = ({ navigation: { navigate } }) => {
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
 
+    socket = new WebSocket('ws://http://backendpamiw.herokuapp.com');
+
     useEffect(() => {
         (async () => {
             try {
