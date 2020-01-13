@@ -1,0 +1,16 @@
+#!/bin/bash
+
+if [ $1 == frontend ]
+	then
+		docker-compose build
+		docker tag laboratoriumpamiw_frontend:latest registry.heroku.com/frontendpamiw/web
+		docker push registry.heroku.com/frontendpamiw/web
+		heroku container:release web --app frontendpamiw
+	else
+		docker-compose build
+		docker tag laboratoriumpamiw_backend:latest registry.heroku.com/backendpamiw/web
+		docker push registry.heroku.com/backendpamiw/web
+		heroku container:release web --app backendpamiw
+fi
+
+

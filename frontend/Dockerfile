@@ -10,15 +10,7 @@ WORKDIR /frontend
 # Install requirements.txt
 RUN pip3 install --no-cache-dir -r requirements.txt
 
-# NGINX setup
-COPY ./frontend/nginx.sh /frontend/nginx.sh
-RUN chmod +x /frontend/nginx.sh
-
-ENV PYTHONPATH=/frontend
-
-ENTRYPOINT ["/frontend/nginx.sh"]
+ENTRYPOINT ["python"]
 
 # Start Server
-CMD ["/start.sh"]
-
-EXPOSE 80 443
+CMD ["main.py"]

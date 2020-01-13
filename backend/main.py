@@ -1,6 +1,5 @@
 from flask import Flask, jsonify, Blueprint, request, Response, render_template, redirect, send_file, send_from_directory, jsonify
 from flask_cors import CORS
-#from flask_jwt_extended import JWTManager, create_access_token, jwt_required
 from flask_swagger_ui import get_swaggerui_blueprint
 import jwt
 import os
@@ -10,6 +9,8 @@ import json
 import random
 import string
 import shutil
+import time
+from flask_socketio import SocketIO, join_room, leave_room, emit, send
 
 def generateKey(stringLength):
     characters = string.ascii_letters + string.digits
@@ -17,12 +18,18 @@ def generateKey(stringLength):
 
 app = Flask(__name__)
 CORS(app)
-dbauth = redis.Redis(host = 'redis', port = 6379, decode_responses=True, db = 0)
-db = redis.Redis(host = 'redis', port = 6379, decode_responses=True, db = 1)
+socket_io = SocketIO(app, cors_allowed_origins="*")
+
+
+port = int(os.environ.get("PORT", 5000))
+
+#dbauth = redis.Redis(host = 'redis', port = 6379, decode_responses=True, db = 0)
+#db = redis.Redis(host = 'redis', port = 6379, decode_responses=True, db = 1)
+dbauth = redis.from_url(os.environ.get("REDIS_URL"), db = 0)
+db = redis.from_url(os.environ.get("REDIS_URL"), db = 1)
+dbauth.flushall()
+db.flushall()
 secret_key = generateKey(20)
-#app.config["JWT_SECRET_KEY"] = generateKey(20)
-#app.config["JWT_ACCESS_TOKEN_EXPIRES"] = 300
-#jwt = JWTManager(app)
  
 SWAGGER_URL = "/swagger"
 API_URL = "/static/swagger.json"
@@ -48,7 +55,7 @@ def isLoginInDatabase(login):
     return True
 
 def checkPassword(user):
-    if db.hget(user["name"], "password") == user['password']:
+    if db.hget(user["name"], "password").decode("utf-8") == user['password']:
         return True
     return False
     
@@ -56,7 +63,7 @@ def checkPassword(user):
 def send_static(path):
     return send_from_directory('static', path)
 
-@app.route('/database', methods=['POST'])
+@app.route('/register', methods=['POST'])
 def tryToAddLogin():
     try:
         user = json.loads(request.data)
@@ -80,16 +87,13 @@ def tryToLogIn():
         if isLoginInDatabase(user["name"]):
             if checkPassword(user):
                 sessionid = generateKey(10)
-                dbauth.set(sessionid, 1, ex = 300)
-                #access_token = create_access_token(identity = user["name"])
+                dbauth.set(sessionid, user["name"], ex = 300)
                 access_token = jwt.encode({'user': sessionid}, secret_key, algorithm='HS256')
                 db.lpush('users', sessionid)
                 message = {
                     "sessionid": sessionid,
                     "jwt": access_token.decode('utf-8')
                 }
-                #resp.set_cookie('sessionid', sessionid, domain='localhost')
-                #resp.set_cookie('jwt', access_token.decode('utf-8'), domain='dev.localhost')
                 return Response(json.dumps(message), 200)
                 
             else:
@@ -101,12 +105,17 @@ def tryToLogIn():
         return Response("Failed to read request", 400)
     
 
-@app.route('/logout', methods=['POST'])
+@app.route('/logout', methods=['DELETE'])
 def tryToLogOut():
     try:
+        jwtek = request.headers.get('Authorization')
+        decoded = jwt.decode(jwtek.encode(), secret_key, algorithms='HS256')
+
+        if not checkJwt(decoded):
+            return 'JWT authentication failed', 400
+            
         user = json.loads(request.data)
         dbauth.delete(user["sessionid"])
-        #db.lrem('users', 0, user["sessionid"])
         return Response("Logged out", 200)
     except Exception as e:
         print(e, file = sys.stderr)
@@ -115,8 +124,7 @@ def tryToLogOut():
 
 @app.route('/check', methods=['POST'])
 def checkIfLoggedIn():
-    try:
-        #users = db.lrange('users', 0, 100000)       
+    try:    
         session = dbauth.get(request.data)
         if session == None:
             return Response("Authorization failed", 201)
@@ -125,20 +133,20 @@ def checkIfLoggedIn():
         print(e, file = sys.stderr)
         return Response("Failed to read request", 400)
 
-@app.route('/pdfs/list', methods=['GET'])
-def getPdfList():
-    files = db.lrange('filenames', 0, 1000000)
-    message = {
-        "links": files
-    }
-    return Response(json.dumps(message), 200)
-
 @app.route("/publications/<title>", methods=["POST"])
 def uploadPdf(title):
     try:
-        f = request.files["pdf"]
-        savePdf(f, title)
-        return "ok", 200
+        jwtek = request.headers.get('Authorization')
+        decoded = jwt.decode(jwtek.encode(), secret_key, algorithms='HS256')
+
+        if not checkJwt(decoded):
+            return 'JWT authentication failed', 400
+
+        f = request.files['file']
+        if savePdf(f, title):
+            return "ok", 200
+        else:
+            return "File exists", 201
     except Exception as e:
         print(e, file = sys.stderr)
         return Response("Failed to read request", 400)
@@ -152,8 +160,8 @@ def downloadDeletePdf(title, name):
         if not checkJwt(decoded):
             return 'JWT authentication failed', 400
 
-        full_name = db.hget(title + '/' + name, "path_to_file")
-        org_filename = db.hget(title + '/' + name, "org_filename")
+        full_name = db.hget(title + '/' + name, "path_to_file").decode("utf-8")
+        org_filename = db.hget(title + '/' + name, "org_filename").decode("utf-8")
         print(title)
         print(name)
         if(full_name != None):
@@ -175,38 +183,101 @@ def downloadDeletePdf(title, name):
 @app.route("/publications", methods=["POST"])
 def addPublication():
     try:
-        title = request.get_json()['title'].replace(" ", "")
-        db.hset(title, 'title', request.get_json()['title'])
-        db.hset(title, 'author', request.get_json()['author'])
-        db.hset(title, 'publisher', request.get_json()['publisher'])
+        jwtek = request.headers.get('Authorization')
+        decoded = jwt.decode(jwtek.encode(), secret_key, algorithms='HS256')
+
+        if not checkJwt(decoded):
+            return 'JWT authentication failed', 400
+
+        username = dbauth.get(decoded['user'])
+        pub = json.loads(request.data)
+        title = pub['title'].replace(" ", "")
+        if db.hget(title, 'title') != None:
+            return "This publication is already in database", 201
+        if '/' in title:
+            return "There is a forbidden sign in publication's title", 202
+        db.hset(title, 'title', pub['title'])
+        db.hset(title, 'author', pub['author'])
+        db.hset(title, 'publisher', pub['publisher'])
+        db.hset(title, 'owner', username)
         db.lpush('pubnames', title)
+        socket_io.emit('publication added', 'Pub added', broadcast=True)
         return "ok", 200
     except Exception as e:
-        print(e, file = sys.stderr)
+        print(e, flush=True)
         return Response("Failed to read request", 400)
 
 @app.route("/publications", methods=["GET"])
 def getPublications():
-    files = db.lrange('pubnames', 0, 1000000)
-    message = {
-        "links": files
-    }
-    return Response(json.dumps(message), 200)
+    try:
+        jwtek = request.headers.get('Authorization')
+        decoded = jwt.decode(jwtek.encode(), secret_key, algorithms='HS256')
+
+        if not checkJwt(decoded):
+            return 'JWT authentication failed', 400
+        
+        username = dbauth.get(decoded['user'])
+        files = db.lrange('pubnames', 0, 1000000)
+        print(files, file=sys.stderr)
+        pub_codes = []
+        pub_names = []
+        for fil in files:
+            if db.hget(fil.decode("utf-8"), 'owner') == username:
+                pub_codes.append(fil.decode("utf-8"))
+                pub_names.append(db.hget(fil.decode("utf-8"), 'title').decode("utf-8"))
+
+        message = {
+            "links": pub_codes,
+            "names": pub_names
+        }
+        return Response(json.dumps(message), 200)
+    except Exception as e:
+        print(e, file = sys.stderr)
+        return Response("Failed to read request", 400)
 
 @app.route("/publications/<title>", methods=["GET"])
 def getPublication(title):
+    jwtek = request.headers.get('Authorization')
+    decoded = jwt.decode(jwtek.encode(), secret_key, algorithms='HS256')
+
+    if not checkJwt(decoded):           
+        return 'JWT authentication failed', 400
+
+    username = dbauth.get(decoded['user'])
+
+    if db.hget(title, 'owner') == None:
+        return 'Publication unrecognized', 410
+    print(username, file = sys.stderr)
+    print(db.hget(title, 'owner'), file = sys.stderr)
+    if db.hget(title, 'owner') != username:
+        return 'JWT authentication failed', 420
+
+    files = db.lrange(title + " filenames", 0, 100000)
+    proper_files = []
+    for fil in files:
+        proper_files.append(fil.decode("utf-8"))
     message = {
-        "title": db.hget(title, 'title'),
-        "author": db.hget(title, 'author'),
-        "publisher": db.hget(title, 'publisher'),
-        "links": db.lrange(title + " filenames", 0, 100000)
+        "title": db.hget(title, 'title').decode("utf-8"),
+        "author": db.hget(title, 'author').decode("utf-8"),
+        "publisher": db.hget(title, 'publisher').decode("utf-8"),
+        "links": proper_files
     }
     return Response(json.dumps(message), 200)
 
 @app.route("/publications/<title>", methods=["DELETE"])
 def removePublication(title):
+    jwtek = request.headers.get('Authorization')
+    decoded = jwt.decode(jwtek.encode(), secret_key, algorithms='HS256')
+
+    if not checkJwt(decoded):
+        return 'JWT authentication failed', 400
+
+    files = db.lrange(title + " filenames", 0, 1000000)
+    proper_files = []
+    for fil in files:
+        proper_files.append(fil.decode("utf-8"))
     shutil.rmtree('files/' + title, ignore_errors=True)
-    for f in db.lrange(title + " filenames", 0, 1000000):
+    for f in proper_files:
         db.delete(title + f)
         
     db.delete(title + " filenames")
@@ -217,15 +288,18 @@ def removePublication(title):
 def savePdf(file_to_save, title):
     if not os.path.exists("files/" + title):
         os.mkdir("files/" + title)
-        print("Directory " , "files/" + title ,  " Created ")
+    if db.hget(title + '/' + file_to_save.filename, "org_filename") != None:
+        return False
+    
     path_to_file = "files/" + title + '/' + file_to_save.filename
     file_to_save.save(path_to_file)
     db.hset(title + '/' + file_to_save.filename, "org_filename", file_to_save.filename)
     db.hset(title + '/' + file_to_save.filename, "path_to_file", path_to_file)
     db.lpush(title + " filenames", file_to_save.filename)
+    return True
 
 def removePdf(name, title):
-    path_to_file = "files/"+ title + '/' + name
+    path_to_file = "files/" + title + '/' + name
     os.remove(path_to_file)
     db.delete(name)
     db.lrem(title + " filenames", 0, name)
@@ -235,10 +309,7 @@ def checkJwt(token):
         return False
     if dbauth.get(token['user']) == None:
         return False
-    #for user in db.lrange('users', 0, 1000000):
-    #    if user == token['user']:
-    #        return True
     return True
 
 if __name__ == "__main__":
-	app.run(host='0.0.0.0', port=80)
+	socket_io.run(app, host='0.0.0.0', port=port)

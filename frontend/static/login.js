@@ -18,7 +18,7 @@ function checkSession() {
     let sid = getCookie("sessionid");
     const promise = new Promise((resolve, reject) => {
         const Http = new XMLHttpRequest();
-        const url='http://localhost:3030/check';
+        const url='http://backendpamiw.herokuapp.com/check';
         Http.open("POST", url);
         Http.onload = () => resolve([Http.response, Http.status]);
         Http.onerror = () => reject(Http.statusText);
@@ -26,7 +26,7 @@ function checkSession() {
     });
     promise.then((value) => {
         if(value[1] == 200) {
-            window.location.replace("http://localhost:3000/cloud");
+            window.location.replace("http://frontendpamiw.herokuapp.com/cloud");
         }
     }).catch((message) => {
         document.getElementById('error').innerHTML = message;
@@ -43,7 +43,7 @@ function tryToSubmit() {
     user = JSON.stringify(user)
     const promise = new Promise((resolve, reject) => {
         const Http = new XMLHttpRequest();
-        const url='http://localhost:3030/login';
+        const url='http://backendpamiw.herokuapp.com/login';
         Http.open("POST", url);
         Http.onload = () => resolve([Http.response, Http.status]);
         Http.onerror = () => reject(Http.statusText);
@@ -59,7 +59,7 @@ function tryToSubmit() {
             document.cookie = 'sessionid=' + resp.sessionid + '; path=/;"';
             document.cookie = 'jwt=' + resp.jwt + '; path=/;"';
             //document.cookie = 'user=' + username + '; expires=' + date.toUTCString() + '; path=/;"';
-            window.location.replace("http://localhost:3000/cloud");
+            window.location.replace("http://frontendpamiw.herokuapp.com/cloud");
         }
         else {
             document.getElementById('error-username').innerHTML = value[0];

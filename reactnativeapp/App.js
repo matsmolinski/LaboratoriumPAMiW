@@ -1,22 +1,34 @@
 import React from 'react'
 import { StatusBar } from 'react-native'
 import { createAppContainer, createSwitchNavigator } from 'react-navigation'
-import { HomeScreen, LoginScreen, ProfileScreen, AuthLoadingScreen, FilesScreen } from './components'
+import { LoginPage, LogoutPage, CheckSession, PublicationPage, RegistrationPage } from './components'
 import { ThemeProvider } from 'react-native-elements'
 import { createBottomTabNavigator } from 'react-navigation-tabs'
+import { createMaterialBottomTabNavigator } from 'react-navigation-material-bottom-tabs';
 import { createStackNavigator } from 'react-navigation-stack'
 
-const AppBottomTab = createBottomTabNavigator({ Home: HomeScreen, Files: FilesScreen, Profile: ProfileScreen })
-const AuthStack = createStackNavigator({ Login: LoginScreen }, { headerMode: 'none' })
-
+const AppBottomTab = createMaterialBottomTabNavigator({ Publications: PublicationPage, Logout: LogoutPage },
+  {
+    activeColor: '#ffffff',
+    inactiveColor: '#000000',
+    barStyle: { backgroundColor: '#00aeef' }
+  }
+)
+const AuthStack = createMaterialBottomTabNavigator({ Login: LoginPage, Register: RegistrationPage }, {
+  activeColor: '#ffffff',
+  inactiveColor: '#000000',
+  barStyle: { backgroundColor: '#00aeef' }
+})
+//const AuthStack = createBottomTabNavigator({ Login: LoginPage, Register: RegistrationPage })
+//headerMode: 'none'
 const RootStack = createSwitchNavigator(
   { 
-    AuthLoading: AuthLoadingScreen,
-    App: AppBottomTab,
+    Check: CheckSession,
+    Cloud: AppBottomTab,
     Auth: AuthStack
   },
   {
-    initialRouteName: 'AuthLoading'
+    initialRouteName: 'Check'
   }
 )
 
@@ -34,25 +46,3 @@ const theme = {
     raised: true
   }
 }
-
-
-/*import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-
-export default function App() {
-  return (
-    <View style={styles.container}>
-      <Text>Open up App.js to start working on your app!</Text>
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
-*/

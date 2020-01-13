@@ -11,15 +11,20 @@ function tryToSubmit() {
     user = JSON.stringify(user);
     const promise = new Promise((resolve, reject) => {
         const Http = new XMLHttpRequest();
-        const url='http://localhost:3030/database';
+        const url='http://backendpamiw.herokuapp.com/register';
         Http.open("POST", url);
-        Http.onload = () => resolve(Http.responseText);
+        Http.onload = () => resolve([Http.responseText, Http.status]);
         Http.onerror = () => reject(Http.statusText);
         Http.send(user);
     });
-    promise.then((message) => {
-        document.getElementById('error-username').innerHTML = message;
+    promise.then((resp) => {
+        if(resp[1] === 200)
+            document.getElementById('error-username').className = 'success';
+        else
+            document.getElementById('error-username').className = 'error';
+        document.getElementById('error-username').innerHTML = resp[0];
     }).catch((message) => {
+        document.getElementById('error-username').className = 'error';
         document.getElementById('error-username').innerHTML = message;
     });
     return false;
