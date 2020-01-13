@@ -1,23 +1,45 @@
 import React, { useState, useEffect } from 'react'
-import { View, AsyncStorage } from 'react-native'
+import { View, AsyncStorage, Alert } from 'react-native'
 import styles from '../assets/styles'
 import * as DocumentPicker from 'expo-document-picker'
 import { Button, Input, Text, Icon } from 'react-native-elements'
 import { Formik } from 'formik'
 import * as FileSystem from 'expo-file-system';
+import socketIO from 'socket.io-client';
 import * as MediaLibrary from 'expo-media-library';
 
 const PublicationPage = ({ navigation: { navigate } }) => {
     const [publications, setPublications] = useState([])
+    const [publicationsNames, setPublicationsNames] = useState([])
     const [publicationData, setPublicationData] = useState({})
     const [view, setView] = useState('publications')
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
+    const [alert, setAlert] = useState(false)
 
-    socket = new WebSocket('ws://http://backendpamiw.herokuapp.com');
-
+    
     useEffect(() => {
         (async () => {
+            const socket = socketIO('http://backendpamiw.herokuapp.com/', {      
+            transports: ['websocket'], jsonp: false });   
+            socket.connect(); 
+            socket.on('connect', () => { 
+                console.log('connected to socket server'); 
+            }); 
+            socket.on("publication added", () => {  
+                setAlert(true)          
+            })
+            /*socket.onopen = () => {
+                // connection opened
+                console.log("rypka?")
+            };
+            socket.onerror = (e) => {
+                // an error occurred
+                console.log(e.message);
+              };
+            socket.onmessage = ({ message }) => {
+                
+            }*/
             try {
                 if(view === 'publications') {
                     const token = await AsyncStorage.getItem('jwt')
@@ -28,9 +50,8 @@ const PublicationPage = ({ navigation: { navigate } }) => {
                         }
                     })
                     const data = await response.json()
-                    console.log(data)
-                    console.log(data['links'])
                     setPublications(data['links'])
+                    setPublicationsNames(data['names'])
                     
                 }
                 
@@ -101,9 +122,8 @@ const PublicationPage = ({ navigation: { navigate } }) => {
                 }
             })
             const data = await response.json()
-            console.log(data)
-            console.log(data['links'])
             setPublications(data['links'])
+            setPublicationsNames(data['names'])
             setView('publications')
         } else {
             setLoading(false)
@@ -131,6 +151,7 @@ const PublicationPage = ({ navigation: { navigate } }) => {
             })
             const data = await response.json()
             setPublications(data['links'])
+            setPublicationsNames(data['names'])
             setView('publications')
         }
     }
@@ -145,7 +166,6 @@ const PublicationPage = ({ navigation: { navigate } }) => {
     }
 
     const removeFile = async (file) => {
-        console.log(file)
         const token = await AsyncStorage.getItem('jwt')
         let response = await fetch(`http://backendpamiw.herokuapp.com/publications/` + view + '/' + file, {
             method: 'DELETE',
@@ -168,7 +188,6 @@ const PublicationPage = ({ navigation: { navigate } }) => {
     }
 
     const openPublication = async (pub) => {
-        console.log("rypkens")
         const token = await AsyncStorage.getItem('jwt')
         const response = await fetch(`http://backendpamiw.herokuapp.com/publications/` + pub, {
             method: 'GET',
@@ -181,7 +200,28 @@ const PublicationPage = ({ navigation: { navigate } }) => {
         setView(pub)
     }
 
+    const refreshPublications = async () => {
+        const token = await AsyncStorage.getItem('jwt')
+            const response = await fetch(`http://backendpamiw.herokuapp.com/publications`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': token
+                }
+            })
+            const data = await response.json()
+            setPublications(data['links'])
+            setPublicationsNames(data['names'])
+            setView('publications')
+        }
+
     if(view === 'publications') {
+        if(alert) {
+            Alert.alert(
+                'Server info',
+                'New publication added'
+            )
+            setAlert(false)
+        }
         return (
             <View style={styles.container}>
                 <View style={styles.absoluteButtonContainer}>
@@ -199,7 +239,7 @@ const PublicationPage = ({ navigation: { navigate } }) => {
                     <Button
                         style={styles.buttonSeries}
                         key={index}
-                        title={pub}
+                        title={publicationsNames[index]}
                         onPress={() => {openPublication(pub)}} 
                     />
                     <Icon 
@@ -273,7 +313,7 @@ const PublicationPage = ({ navigation: { navigate } }) => {
                             <View style={styles.buttonContainer}>
                                 <Button
                                     title="Cancel" 
-                                    onPress={() => {setView('publications')}} 
+                                    onPress={() => {refreshPublications()}}
                                     buttonStyle={styles.button}
                                 />
                             </View>
@@ -317,7 +357,7 @@ const PublicationPage = ({ navigation: { navigate } }) => {
             <View style={styles.buttonContainer}>
                 <Button
                     title="Cancel" 
-                    onPress={() => {setView('publications')}} 
+                    onPress={() => {refreshPublications()}} 
                     buttonStyle={styles.button}
                 />
             </View>
