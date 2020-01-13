@@ -1,6 +1,19 @@
 import { StyleSheet } from 'react-native'
 
 export default StyleSheet.create({
+    button: {
+      backgroundColor: '#00aeef',
+      borderColor: 'red'
+    },
+    buttonSeries: {
+      backgroundColor: '#b3e6ff',
+      borderColor: 'red',
+      width: '80%'
+    },
+    buttonSeriesContainer: {
+      paddingTop: 5,
+      paddingBottom: 5
+    },
     container: {
       flex: 1,
       flexDirection: 'column',
@@ -12,7 +25,9 @@ export default StyleSheet.create({
       height: 90
     },
     buttonContainer: {
-      width: '30%'
+      width: '30%',
+      paddingTop: 5,
+      paddingBottom: 5
     },
     leftIconContainer: {
       marginRight: 10,
@@ -23,4 +38,5 @@ export default StyleSheet.create({
       bottom: 10,
       right: 10
     }
+    
   })

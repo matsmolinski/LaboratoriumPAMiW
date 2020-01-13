@@ -3,3 +3,5 @@ flask_cors
 redis
 flask_jwt
 flask_swagger_ui
+flask-socketio
+eventlet

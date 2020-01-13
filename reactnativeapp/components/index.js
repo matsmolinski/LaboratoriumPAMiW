@@ -1,7 +1,7 @@
-import HomeScreen from './HomeScreen'
-import LoginScreen from './SignInScreen'
-import ProfileScreen from './ProfileScreen'
-import AuthLoadingScreen from './AuthLoadingScreen'
-import FilesScreen from './FilesScreen'
+import LoginPage from './LoginPage'
+import LogoutPage from './LogoutPage'
+import CheckSession from './CheckSession'
+import PublicationPage from './PublicationPage'
+import RegistrationPage from './RegistrationPage'
 
-export { HomeScreen, LoginScreen, ProfileScreen, AuthLoadingScreen, FilesScreen }
+export { LoginPage, LogoutPage, CheckSession, PublicationPage, RegistrationPage }
