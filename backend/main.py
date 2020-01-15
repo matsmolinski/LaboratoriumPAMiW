@@ -10,6 +10,7 @@ import random
 import string
 import shutil
 import time
+import crypt
 from flask_socketio import SocketIO, join_room, leave_room, emit, send
 
 def generateKey(stringLength):
@@ -46,7 +47,8 @@ app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
 
 def addUser(login, email, password):
     db.hset(login, "email", email)
-    db.hset(login, "password", password)
+    crypted_password = crypt.crypt(password, secret_key)
+    db.hset(login, "password", crypted_password)
 
 def isLoginInDatabase(login):
     email = db.hget(login, 'email')
@@ -55,7 +57,8 @@ def isLoginInDatabase(login):
     return True
 
 def checkPassword(user):
-    if db.hget(user["name"], "password").decode("utf-8") == user['password']:
+    crypted_password = crypt.crypt(user['password'], secret_key)
+    if db.hget(user["name"], "password").decode("utf-8") == crypted_password:
         return True
     return False
     
@@ -70,7 +73,8 @@ def tryToAddLogin():
         login = user['name']
         email = user['email']
         password = user['password']
-
+        if '/' in login:
+            return "There is a forbidden sign '/' in login", 202
         if isLoginInDatabase(login):
             return Response("Login " + login + " is already in use!", 201)
         else:
@@ -88,8 +92,7 @@ def tryToLogIn():
             if checkPassword(user):
                 sessionid = generateKey(10)
                 dbauth.set(sessionid, user["name"], ex = 300)
-                access_token = jwt.encode({'user': sessionid}, secret_key, algorithm='HS256')
-                db.lpush('users', sessionid)
+                access_token = jwt.encode({'user': user["name"]}, secret_key, algorithm='HS256')
                 message = {
                     "sessionid": sessionid,
                     "jwt": access_token.decode('utf-8')
@@ -189,13 +192,13 @@ def addPublication():
         if not checkJwt(decoded):
             return 'JWT authentication failed', 400
 
-        username = dbauth.get(decoded['user'])
+        username = decoded['user']
         pub = json.loads(request.data)
         title = pub['title'].replace(" ", "")
         if db.hget(title, 'title') != None:
             return "This publication is already in database", 201
         if '/' in title:
-            return "There is a forbidden sign in publication's title", 202
+            return "There is a forbidden sign '/' in publication's title", 202
         db.hset(title, 'title', pub['title'])
         db.hset(title, 'author', pub['author'])
         db.hset(title, 'publisher', pub['publisher'])
@@ -216,7 +219,7 @@ def getPublications():
         if not checkJwt(decoded):
             return 'JWT authentication failed', 400
         
-        username = dbauth.get(decoded['user'])
+        username = decoded['user']
         files = db.lrange('pubnames', 0, 1000000)
         print(files, file=sys.stderr)
         pub_codes = []
@@ -243,7 +246,7 @@ def getPublication(title):
     if not checkJwt(decoded):           
         return 'JWT authentication failed', 400
 
-    username = dbauth.get(decoded['user'])
+    username = decoded['user']
 
     if db.hget(title, 'owner') == None:
         return 'Publication unrecognized', 410
@@ -307,7 +310,7 @@ def removePdf(name, title):
 def checkJwt(token):
     if token == None:
         return False
-    if dbauth.get(token['user']) == None:
+    if db.hget(token['user'], 'email') == None:
         return False
     return True
 
