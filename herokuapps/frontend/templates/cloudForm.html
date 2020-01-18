@@ -14,7 +14,7 @@
         <span id="error" class="error" aria-live="polite"></span>
         <br>
         <section>
-            <form action = "http://frontendpamiw.herokuapp.com/add-publication" method = "GET">
+            <form action = "https://frontendpamiw.herokuapp.com/add-publication" method = "GET">
                 <button class="normalbutton" type = "submit">Add publication</button>
             </form>
             <ul>
@@ -23,6 +23,9 @@
                 {% endfor %}
             </ul>
         </section>
+        <form action = "https://frontendpamiw.herokuapp.com/change-password" method = "GET">
+            <button class="normalbutton" type = "submit">Change password</button>
+        </form>
         <button type="button" class="normalbutton" onclick="tryToLogOut()">Log out</button>
         <br>
     </div>

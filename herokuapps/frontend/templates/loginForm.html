@@ -27,6 +27,9 @@
             <span id="error-passwd" class="error" aria-live="polite"></span>
             <br>
         </label>
+        {% if error != None %}
+            <div>{{error}}</div>
+        {% endif %}
         <hr>
         <button type="submit" class="normalbutton">Sign in</button>
         <br>

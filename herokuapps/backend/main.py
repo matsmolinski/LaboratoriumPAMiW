@@ -26,8 +26,8 @@ port = int(os.environ.get("PORT", 5000))
 
 #dbauth = redis.Redis(host = 'redis', port = 6379, decode_responses=True, db = 0)
 #db = redis.Redis(host = 'redis', port = 6379, decode_responses=True, db = 1)
-dbauth = redis.from_url(os.environ.get("REDIS_URL"), db = 0)
-db = redis.from_url(os.environ.get("REDIS_URL"), db = 1)
+dbauth = redis.from_url(os.environ.get("REDIS_URL"), db = 0, decode_responses=True)
+db = redis.from_url(os.environ.get("REDIS_URL"), db = 1, decode_responses=True)
 dbauth.flushall()
 db.flushall()
 secret_key = generateKey(20)
@@ -47,8 +47,16 @@ app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
 
 def addUser(login, email, password):
     db.hset(login, "email", email)
-    crypted_password = crypt.crypt(password, secret_key)
+    salt = generateKey(20)
+    crypted_password = crypt.crypt(password, salt)
     db.hset(login, "password", crypted_password)
+    db.hset(login, "salt", salt)
+
+def changePassword(login, new_password):
+    salt = generateKey(20)
+    crypted_password = crypt.crypt(new_password, salt)
+    db.hset(login, "password", crypted_password)
+    db.hset(login, "salt", salt)
 
 def isLoginInDatabase(login):
     email = db.hget(login, 'email')
@@ -56,9 +64,10 @@ def isLoginInDatabase(login):
         return False
     return True
 
-def checkPassword(user):
-    crypted_password = crypt.crypt(user['password'], secret_key)
-    if db.hget(user["name"], "password").decode("utf-8") == crypted_password:
+def checkPassword(username, password):
+    salt = db.hget(username, "salt")
+    crypted_password = crypt.crypt(password, salt)
+    if db.hget(username, "password") == crypted_password:
         return True
     return False
     
@@ -89,7 +98,7 @@ def tryToLogIn():
     try:
         user = json.loads(request.data)
         if isLoginInDatabase(user["name"]):
-            if checkPassword(user):
+            if checkPassword(user["name"], user['password']):
                 sessionid = generateKey(10)
                 dbauth.set(sessionid, user["name"], ex = 300)
                 access_token = jwt.encode({'user': user["name"]}, secret_key, algorithm='HS256')
@@ -117,20 +126,49 @@ def tryToLogOut():
         if not checkJwt(decoded):
             return 'JWT authentication failed', 400
             
+        username = decoded['user']
         user = json.loads(request.data)
+        
+        if not username == dbauth.get(user["sessionid"]):
+            return 'Authorization error - jwt does not match session', 400
+
         dbauth.delete(user["sessionid"])
         return Response("Logged out", 200)
     except Exception as e:
         print(e, file = sys.stderr)
         return Response("Failed to read request", 400)
-    
+
+@app.route('/changepassword', methods=['POST'])
+def changeUserPassword():
+    try:
+        jwtek = request.headers.get('Authorization')
+        decoded = jwt.decode(jwtek.encode(), secret_key, algorithms='HS256')
+
+        if not checkJwt(decoded):
+            return 'JWT authentication failed', 400
+            
+        username = decoded['user']
+        user = json.loads(request.data)
+        
+        if not username == dbauth.get(user["sessionid"]):
+            return 'Authorization error - jwt does not match session', 400
+
+        if not checkPassword(username, user['oldPassword']):
+            return 'Authorization error - incorrect old password', 400
+
+        changePassword(username, user['newPassword'])
+        return Response("Password changed", 200)
+    except Exception as e:
+        print(e, flush=True)
+        return Response("Failed to read request", 400)
 
 @app.route('/check', methods=['POST'])
 def checkIfLoggedIn():
-    try:    
-        session = dbauth.get(request.data)
+    try:   
+        jsn = json.loads(request.data) 
+        session = dbauth.get(jsn['sessionid'])
         if session == None:
-            return Response("Authorization failed", 201)
+            return Response("Authorization failed", 400)          
         return Response("Everything fine", 200)
     except Exception as e:
         print(e, file = sys.stderr)
@@ -163,8 +201,8 @@ def downloadDeletePdf(title, name):
         if not checkJwt(decoded):
             return 'JWT authentication failed', 400
 
-        full_name = db.hget(title + '/' + name, "path_to_file").decode("utf-8")
-        org_filename = db.hget(title + '/' + name, "org_filename").decode("utf-8")
+        full_name = db.hget(title + '/' + name, "path_to_file")
+        org_filename = db.hget(title + '/' + name, "org_filename")
         print(title)
         print(name)
         if(full_name != None):
@@ -218,16 +256,15 @@ def getPublications():
 
         if not checkJwt(decoded):
             return 'JWT authentication failed', 400
-        
         username = decoded['user']
         files = db.lrange('pubnames', 0, 1000000)
-        print(files, file=sys.stderr)
         pub_codes = []
         pub_names = []
         for fil in files:
-            if db.hget(fil.decode("utf-8"), 'owner') == username:
-                pub_codes.append(fil.decode("utf-8"))
-                pub_names.append(db.hget(fil.decode("utf-8"), 'title').decode("utf-8"))
+            print()
+            if db.hget(fil, 'owner') == username:
+                pub_codes.append(fil)
+                pub_names.append(db.hget(fil, 'title'))
 
         message = {
             "links": pub_codes,
@@ -247,23 +284,17 @@ def getPublication(title):
         return 'JWT authentication failed', 400
 
     username = decoded['user']
-
     if db.hget(title, 'owner') == None:
         return 'Publication unrecognized', 410
-    print(username, file = sys.stderr)
-    print(db.hget(title, 'owner'), file = sys.stderr)
     if db.hget(title, 'owner') != username:
         return 'JWT authentication failed', 420
 
     files = db.lrange(title + " filenames", 0, 100000)
-    proper_files = []
-    for fil in files:
-        proper_files.append(fil.decode("utf-8"))
     message = {
-        "title": db.hget(title, 'title').decode("utf-8"),
-        "author": db.hget(title, 'author').decode("utf-8"),
-        "publisher": db.hget(title, 'publisher').decode("utf-8"),
-        "links": proper_files
+        "title": db.hget(title, 'title'),
+        "author": db.hget(title, 'author'),
+        "publisher": db.hget(title, 'publisher'),
+        "links": files
     }
     return Response(json.dumps(message), 200)
 
@@ -276,11 +307,8 @@ def removePublication(title):
         return 'JWT authentication failed', 400
 
     files = db.lrange(title + " filenames", 0, 1000000)
-    proper_files = []
-    for fil in files:
-        proper_files.append(fil.decode("utf-8"))
     shutil.rmtree('files/' + title, ignore_errors=True)
-    for f in proper_files:
+    for f in files:
         db.delete(title + f)
         
     db.delete(title + " filenames")

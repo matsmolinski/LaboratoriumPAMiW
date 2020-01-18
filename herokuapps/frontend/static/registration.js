@@ -11,7 +11,7 @@ function tryToSubmit() {
     user = JSON.stringify(user);
     const promise = new Promise((resolve, reject) => {
         const Http = new XMLHttpRequest();
-        const url='http://backendpamiw.herokuapp.com/register';
+        const url='https://backendpamiw.herokuapp.com/register';
         Http.open("POST", url);
         Http.onload = () => resolve([Http.responseText, Http.status]);
         Http.onerror = () => reject(Http.statusText);
