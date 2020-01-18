@@ -3,7 +3,6 @@ import requests
 import json
 import os
 import sys
-from OpenSSL import SSL
 
 app = Flask(__name__)
 port = int(os.environ.get("PORT", 5000))
@@ -34,7 +33,7 @@ def app_login():
 
 @app.route('/cloud/', methods=['GET'])
 def app_cloud():
-	try:
+#	try:
 		URL = "https://backendpamiw.herokuapp.com/check" 
 		r = requests.post(url = URL, json={"sessionid": request.cookies.get("sessionid")})
 		if not r.ok:
@@ -45,9 +44,9 @@ def app_cloud():
 		data = r.json()
 		print(data, file=sys.stderr)
 		return render_template("cloudForm.html", links = data["links"], names= data["names"], length=len(data['links']))
-	except Exception as e:
-		print(e, file = sys.stderr)
-		return render_template("loginForm.html")
+#	except Exception as e:
+#		print(e, file = sys.stderr)
+#		return render_template("loginForm.html")
 	
 
 @app.route('/add-publication/', methods=['GET', 'POST'])
@@ -63,8 +62,14 @@ def add_pub():
 		title = request.form['title']
 		author = request.form['author']
 		publisher = request.form['publisher']
+		accessibility = request.form['accessibility']
+		names = None
+		if accessibility == 'custom':
+			names = request.form['users']
+			names = names.replace(" ", "")
+			names = names.split(",")
 		URL = "https://backendpamiw.herokuapp.com/publications" 
-		r = requests.post(url = URL, json={'title': title, 'author': author, 'publisher': publisher}, headers={"Authorization": request.cookies.get("jwt")})
+		r = requests.post(url = URL, json={'title': title, 'author': author, 'publisher': publisher, 'accessibility': accessibility, 'names': names}, headers={"Authorization": request.cookies.get("jwt")})
 		return redirect(url_for('app_cloud'))
 
 @app.route('/change-password/', methods=['GET', 'POST'])

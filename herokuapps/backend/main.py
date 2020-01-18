@@ -237,10 +237,19 @@ def addPublication():
             return "This publication is already in database", 201
         if '/' in title:
             return "There is a forbidden sign '/' in publication's title", 202
+        forbidden_names = ['pubnames', 'filenames', 'access']
+        if title in forbidden_names:
+            return "This name is forbidden", 203
         db.hset(title, 'title', pub['title'])
         db.hset(title, 'author', pub['author'])
         db.hset(title, 'publisher', pub['publisher'])
         db.hset(title, 'owner', username)
+        print(pub['names'], flush=True)
+        if pub['accessibility'] == 'public':
+            db.lpush(title + '/access', 'public')
+        if pub['accessibility'] == 'custom':
+            for user in pub['names']:
+                db.lpush(title + '/access', user)           
         db.lpush('pubnames', title)
         socket_io.emit('publication added', 'Pub added', broadcast=True)
         return "ok", 200
@@ -261,18 +270,29 @@ def getPublications():
         pub_codes = []
         pub_names = []
         for fil in files:
-            print()
+            users = db.lrange(fil + '/access', 0, 100000)
+            print(users, flush=True)   
             if db.hget(fil, 'owner') == username:
                 pub_codes.append(fil)
                 pub_names.append(db.hget(fil, 'title'))
-
+                continue
+            if users != []:
+                if users[0] == 'public':
+                    pub_codes.append(fil)
+                    pub_names.append(db.hget(fil, 'title'))
+                    continue
+                for user in users:
+                    if user == username:
+                        pub_codes.append(fil)
+                        pub_names.append(db.hget(fil, 'title'))
+                        break
         message = {
             "links": pub_codes,
             "names": pub_names
         }
         return Response(json.dumps(message), 200)
     except Exception as e:
-        print(e, file = sys.stderr)
+        print(e, flush=True)
         return Response("Failed to read request", 400)
 
 @app.route("/publications/<title>", methods=["GET"])
@@ -287,9 +307,18 @@ def getPublication(title):
     if db.hget(title, 'owner') == None:
         return 'Publication unrecognized', 410
     if db.hget(title, 'owner') != username:
-        return 'JWT authentication failed', 420
+        users = db.lrange(title + '/access', 0, 100000)
+        if users == None:
+            return 'JWT authentication failed', 420
+        if users[0] != 'public':
+            access = False
+            for user in users:
+                if user == username:
+                    access = True
+            if not access:
+                return 'JWT authentication failed', 420                  
 
-    files = db.lrange(title + " filenames", 0, 100000)
+    files = db.lrange(title + "/filenames", 0, 100000)
     message = {
         "title": db.hget(title, 'title'),
         "author": db.hget(title, 'author'),
@@ -306,12 +335,12 @@ def removePublication(title):
     if not checkJwt(decoded):
         return 'JWT authentication failed', 400
 
-    files = db.lrange(title + " filenames", 0, 1000000)
+    files = db.lrange(title + "/filenames", 0, 1000000)
     shutil.rmtree('files/' + title, ignore_errors=True)
     for f in files:
         db.delete(title + f)
         
-    db.delete(title + " filenames")
+    db.delete(title + "/filenames")
     db.delete(title)
     db.lrem("pubnames", 0, title)
     return "Publication is no more", 200
@@ -326,14 +355,14 @@ def savePdf(file_to_save, title):
     file_to_save.save(path_to_file)
     db.hset(title + '/' + file_to_save.filename, "org_filename", file_to_save.filename)
     db.hset(title + '/' + file_to_save.filename, "path_to_file", path_to_file)
-    db.lpush(title + " filenames", file_to_save.filename)
+    db.lpush(title + "/filenames", file_to_save.filename)
     return True
 
 def removePdf(name, title):
     path_to_file = "files/" + title + '/' + name
     os.remove(path_to_file)
     db.delete(name)
-    db.lrem(title + " filenames", 0, name)
+    db.lrem(title + "/filenames", 0, name)
 
 def checkJwt(token):
     if token == None:
