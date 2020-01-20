@@ -1,6 +1,7 @@
 from flask import Flask, jsonify, Blueprint, request, Response, render_template, redirect, send_file, send_from_directory, jsonify
 from flask_cors import CORS
 from flask_swagger_ui import get_swaggerui_blueprint
+from datetime import datetime, timedelta
 import jwt
 import os
 import sys
@@ -12,7 +13,7 @@ import shutil
 import time
 import crypt
 import math
-from flask_socketio import SocketIO, join_room, leave_room, emit, send
+from flask_socketio import SocketIO, emit, send
 
 def generateKey(stringLength):
     characters = string.ascii_letters + string.digits
@@ -54,6 +55,9 @@ def addUser(login, email, password):
         crypted_password = crypt.crypt(crypted_password, salt)
     db.hset(login, "password", crypted_password)
     db.hset(login, "salt", salt)
+    recoveryCode = generateKey(10)
+    db.hset(login, "recoveryCode", recoveryCode)
+    return recoveryCode
 
 def changePassword(login, new_password):
     salt = generateKey(20)
@@ -103,11 +107,11 @@ def tryToAddLogin():
             if not char.isdigit() and not char.isalpha() and not char in " @.":
                 return Response("Give us email without custom chars", 201)
         else:
-            addUser(login, email, password)
+            recoveryCode = addUser(login, email, password)
             warn = ""
             if calc_entropy(password) < 40:
                 warn = "\n       Warning: Your password is weak :("
-            return Response("User " + login + " successfully added" + warn, 200)
+            return Response("User " + login + " successfully added" + warn + " Your recovery code: " + recoveryCode, 200)
     except Exception as e:
         print(e, file = sys.stderr)
         return Response("Failed to read request", 400)
@@ -123,7 +127,7 @@ def tryToLogIn():
             if checkPassword(user["name"], user['password']):
                 sessionid = generateKey(10)
                 dbauth.set(sessionid, user["name"], ex = 900)
-                access_token = jwt.encode({'user': user["name"]}, secret_key, algorithm='HS256')
+                access_token = jwt.encode({'user': user["name"], "exp": datetime.now() + timedelta(seconds=600)}, secret_key, algorithm='HS256')
                 message = {
                     "sessionid": sessionid,
                     "jwt": access_token.decode('utf-8')
@@ -144,7 +148,10 @@ def tryToLogIn():
 def tryToLogOut():
     try:
         jwtek = request.headers.get('Authorization')
-        decoded = jwt.decode(jwtek.encode(), secret_key, algorithms='HS256')
+        try:
+            decoded = jwt.decode(jwtek.encode(), secret_key, algorithms='HS256')
+        except jwt.ExpiredSignatureError:
+            return 'JWT expired', 400
 
         if not checkJwt(decoded):
             return 'JWT authentication failed', 400
@@ -165,7 +172,10 @@ def tryToLogOut():
 def changeUserPassword():
     try:
         jwtek = request.headers.get('Authorization')
-        decoded = jwt.decode(jwtek.encode(), secret_key, algorithms='HS256')
+        try:
+            decoded = jwt.decode(jwtek.encode(), secret_key, algorithms='HS256')
+        except jwt.ExpiredSignatureError:
+            return 'JWT expired', 400
 
         if not checkJwt(decoded):
             return 'JWT authentication failed', 400
@@ -191,6 +201,28 @@ def changeUserPassword():
         print(e, flush=True)
         return Response("Failed to read request", 400)
 
+@app.route('/recoverpassword', methods=['POST'])
+def recoverPassword():
+    try:
+        user = json.loads(request.data)
+        if not isLoginInDatabase(user["login"]):
+            return 'User unrecognized', 201
+        if not user['email'] == db.hget(user["login"], 'email'):
+            return 'Email does not match login', 201
+        if not user['recoveryCode'] == db.hget(user["login"], 'recoveryCode'):
+            return 'Recovery code is wrong', 201    
+        if len(user['newPassword']) < 8:
+            return Response("Your password is too short (min. 8 chars)", 201)    
+        else:        
+            warn = ""
+            if calc_entropy(user['newPassword']) < 40:
+                warn = "  Warning: Your password is weak :("
+            changePassword(user["login"], user['newPassword'])
+            return Response("Password changed" + warn, 200)
+    except Exception as e:
+        print(e, flush=True)
+        return Response("Failed to read request", 400)
+
 @app.route('/check', methods=['POST'])
 def checkIfLoggedIn():
     try:   
@@ -207,8 +239,11 @@ def checkIfLoggedIn():
 def uploadPdf(title):
     try:
         jwtek = request.headers.get('Authorization')
-        decoded = jwt.decode(jwtek.encode(), secret_key, algorithms='HS256')
-
+        try:
+            decoded = jwt.decode(jwtek.encode(), secret_key, algorithms='HS256')
+        except jwt.ExpiredSignatureError:
+            return 'JWT expired', 400
+            
         if not checkJwt(decoded):
             return 'JWT authentication failed', 400
 
@@ -227,7 +262,7 @@ def uploadPdf(title):
 
         f = request.files['file']
         for char in f.filename:
-            if not char.isdigit() and not char.isalpha() and not char in " .@?#!():;%":
+            if not char.isdigit() and not char.isalpha() and not char in " .@?#!():;%-_*+=":
                 return Response("Filename contains forbidden character(s)", 201)
     
         if savePdf(f, title):
@@ -242,7 +277,10 @@ def uploadPdf(title):
 def downloadDeletePdf(title, name):
     try:
         jwtek = request.headers.get('Authorization')
-        decoded = jwt.decode(jwtek.encode(), secret_key, algorithms='HS256')
+        try:
+            decoded = jwt.decode(jwtek.encode(), secret_key, algorithms='HS256')
+        except jwt.ExpiredSignatureError:
+            return 'JWT expired', 400
 
         if not checkJwt(decoded):
             return 'JWT authentication failed', 400
@@ -285,7 +323,10 @@ def downloadDeletePdf(title, name):
 def addPublication():
     try:
         jwtek = request.headers.get('Authorization')
-        decoded = jwt.decode(jwtek.encode(), secret_key, algorithms='HS256')
+        try:
+            decoded = jwt.decode(jwtek.encode(), secret_key, algorithms='HS256')
+        except jwt.ExpiredSignatureError:
+            return 'JWT expired', 400
 
         if not checkJwt(decoded):
             return 'JWT authentication failed', 400
@@ -327,7 +368,10 @@ def addPublication():
 def getPublications():
     try:
         jwtek = request.headers.get('Authorization')
-        decoded = jwt.decode(jwtek.encode(), secret_key, algorithms='HS256')
+        try:
+            decoded = jwt.decode(jwtek.encode(), secret_key, algorithms='HS256')
+        except jwt.ExpiredSignatureError:
+            return 'JWT expired', 400
 
         if not checkJwt(decoded):
             return 'JWT authentication failed', 400
@@ -364,7 +408,10 @@ def getPublications():
 @app.route("/publications/<title>", methods=["GET"])
 def getPublication(title):
     jwtek = request.headers.get('Authorization')
-    decoded = jwt.decode(jwtek.encode(), secret_key, algorithms='HS256')
+    try:
+        decoded = jwt.decode(jwtek.encode(), secret_key, algorithms='HS256')
+    except jwt.ExpiredSignatureError:
+        return 'JWT expired', 400
 
     if not checkJwt(decoded):           
         return 'JWT authentication failed', 400
@@ -396,7 +443,10 @@ def getPublication(title):
 @app.route("/publications/<title>", methods=["DELETE"])
 def removePublication(title):
     jwtek = request.headers.get('Authorization')
-    decoded = jwt.decode(jwtek.encode(), secret_key, algorithms='HS256')
+    try:
+        decoded = jwt.decode(jwtek.encode(), secret_key, algorithms='HS256')
+    except jwt.ExpiredSignatureError:
+        return 'JWT expired', 400
 
     if not checkJwt(decoded):
         return 'JWT authentication failed', 400

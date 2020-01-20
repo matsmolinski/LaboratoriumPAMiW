@@ -29,8 +29,11 @@
             <ul>
                 {% for pdf in links %}
                 <li><button type="button" class="linkbutton" onclick="getPdf('{{pdf}}', '{{title}}')">{{ pdf }}</button> <button type="button" class="linkbutton" onclick="removePdf('{{pdf}}', '{{title}}')"> remove</button></li>
-                {% endfor %}
+                {% endfor %}              
             </ul>
+            {% if error != None %}
+                <div>{{error}}</div>
+            {% endif %}
         </section>
         <form action="https://frontendpamiw.herokuapp.com/cloud" method="GET">
             <button type="submit" class="normalbutton">Go back</button>

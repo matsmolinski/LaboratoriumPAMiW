@@ -1,5 +1,4 @@
-backend/__pycache__/
-frontend/__pycache__/
-node_modules
+herokuapps/backend/__pycache__/
+herokuapps/frontend/__pycache__/
 reactnativeapp/node_modules
 .idea

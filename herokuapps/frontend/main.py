@@ -91,6 +91,20 @@ def change_pas():
 		r = requests.post(url = URL, json={'oldPassword': oldPassword, 'newPassword': newPassword, 'sessionid': request.cookies.get("sessionid")}, headers={"Authorization": request.cookies.get("jwt")})
 		return render_template('changePasswordForm.html', error=r.content.decode('utf-8'))
 
+
+@app.route('/recover-password/', methods=['GET', 'POST'])
+def recover_pas():
+	if request.method == 'GET':
+		return render_template('recoverPasswordForm.html',  error=None)
+	else:
+		login = request.form['login']
+		email = request.form['email']
+		recoveryCode = request.form['recoverycode']
+		newPassword = request.form['newpassword']
+		URL = "https://backendpamiw.herokuapp.com/recoverpassword" 
+		r = requests.post(url = URL, json={'login': login, 'newPassword': newPassword, 'recoveryCode': recoveryCode, 'email': email})
+		return render_template('recoverPasswordForm.html', error=r.content.decode('utf-8'))
+
 @app.route('/publications/<title>', methods=['GET'])
 def get_pub(title):
 	try:
@@ -111,7 +125,10 @@ def get_pub(title):
 			"publisher": data["publisher"]
 		}
 		titleclean = data['title'].replace(" ", "")
-		return render_template("publicationForm.html", links = data["links"], publication = pub, title = titleclean)
+		error = None
+		if('error' in request.args):
+			error = request.args['error']
+		return render_template("publicationForm.html", links = data["links"], publication = pub, title = titleclean, error = error)
 	except Exception as e:
 		print(e, file = sys.stderr)
 		return render_template("loginForm.html")
@@ -121,8 +138,12 @@ def upload_pdf(title):
 	URL = "https://backendpamiw.herokuapp.com/publications/" + title
 	files = {'file': (file.filename, file, 'application/pdf')}
 	r = requests.post(url = URL, files=files, headers={"Authorization": request.cookies.get("jwt")} )
-	if r.ok:
+	if r.status_code == 200:
 		return redirect(url_for('get_pub', title=title))
+	else:
+		return redirect(url_for('get_pub', title=title, error=r.content.decode('utf-8')))
+	#if r.ok:
+	#	return redirect(url_for('get_pub', title=title))
 
 if __name__ == "__main__":
 	app.run(host='0.0.0.0', port=port)#, ssl_context=('app.crt', 'app.key'))
