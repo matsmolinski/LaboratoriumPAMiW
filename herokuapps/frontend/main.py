@@ -70,7 +70,10 @@ def add_pub():
 			names = names.split(",")
 		URL = "https://backendpamiw.herokuapp.com/publications" 
 		r = requests.post(url = URL, json={'title': title, 'author': author, 'publisher': publisher, 'accessibility': accessibility, 'names': names}, headers={"Authorization": request.cookies.get("jwt")})
-		return redirect(url_for('app_cloud'))
+		if r.status_code == 200:
+			return redirect(url_for('app_cloud'))
+		else:
+			return render_template('publicationAddForm.html', error=r.content.decode('utf-8'))
 
 @app.route('/change-password/', methods=['GET', 'POST'])
 def change_pas():
@@ -86,10 +89,7 @@ def change_pas():
 		newPassword = request.form['newpassword']
 		URL = "https://backendpamiw.herokuapp.com/changepassword" 
 		r = requests.post(url = URL, json={'oldPassword': oldPassword, 'newPassword': newPassword, 'sessionid': request.cookies.get("sessionid")}, headers={"Authorization": request.cookies.get("jwt")})
-		if r.status_code == 200:
-			return redirect(url_for('app_cloud'))
-		else:
-			return render_template('changePasswordForm.html', error=r.content.decode('utf-8'))
+		return render_template('changePasswordForm.html', error=r.content.decode('utf-8'))
 
 @app.route('/publications/<title>', methods=['GET'])
 def get_pub(title):

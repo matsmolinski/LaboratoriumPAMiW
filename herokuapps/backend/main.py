@@ -11,6 +11,7 @@ import string
 import shutil
 import time
 import crypt
+import math
 from flask_socketio import SocketIO, join_room, leave_room, emit, send
 
 def generateKey(stringLength):
@@ -49,12 +50,16 @@ def addUser(login, email, password):
     db.hset(login, "email", email)
     salt = generateKey(20)
     crypted_password = crypt.crypt(password, salt)
+    for i in range(1000):
+        crypted_password = crypt.crypt(crypted_password, salt)
     db.hset(login, "password", crypted_password)
     db.hset(login, "salt", salt)
 
 def changePassword(login, new_password):
     salt = generateKey(20)
     crypted_password = crypt.crypt(new_password, salt)
+    for i in range(1000):
+        crypted_password = crypt.crypt(crypted_password, salt)
     db.hset(login, "password", crypted_password)
     db.hset(login, "salt", salt)
 
@@ -64,9 +69,14 @@ def isLoginInDatabase(login):
         return False
     return True
 
+def calc_entropy(password):
+    return len(password) * (math.log(len(string.ascii_lowercase), 2))
+
 def checkPassword(username, password):
     salt = db.hget(username, "salt")
     crypted_password = crypt.crypt(password, salt)
+    for i in range(1000):
+        crypted_password = crypt.crypt(crypted_password, salt)
     if db.hget(username, "password") == crypted_password:
         return True
     return False
@@ -82,13 +92,22 @@ def tryToAddLogin():
         login = user['name']
         email = user['email']
         password = user['password']
-        if '/' in login:
-            return "There is a forbidden sign '/' in login", 202
         if isLoginInDatabase(login):
             return Response("Login " + login + " is already in use!", 201)
+        if len(password) < 8:
+            return Response("Your password is too short (min. 8 chars)", 201)
+        for char in login:
+            if not char.isdigit() and not char.isalpha() and char != ' ':
+                return Response("Login can only have digits, letters or spaces", 201)
+        for char in email:
+            if not char.isdigit() and not char.isalpha() and not char in " @.":
+                return Response("Give us email without custom chars", 201)
         else:
             addUser(login, email, password)
-            return Response("User " + login + " successfully added", 200)
+            warn = ""
+            if calc_entropy(password) < 40:
+                warn = "\n       Warning: Your password is weak :("
+            return Response("User " + login + " successfully added" + warn, 200)
     except Exception as e:
         print(e, file = sys.stderr)
         return Response("Failed to read request", 400)
@@ -97,10 +116,13 @@ def tryToAddLogin():
 def tryToLogIn():
     try:
         user = json.loads(request.data)
+        for char in user["name"]:
+            if not char.isdigit() and not char.isalpha() and char != ' ':
+                return Response("Login can only have digits, letters or spaces", 201)
         if isLoginInDatabase(user["name"]):
             if checkPassword(user["name"], user['password']):
                 sessionid = generateKey(10)
-                dbauth.set(sessionid, user["name"], ex = 300)
+                dbauth.set(sessionid, user["name"], ex = 900)
                 access_token = jwt.encode({'user': user["name"]}, secret_key, algorithm='HS256')
                 message = {
                     "sessionid": sessionid,
@@ -109,6 +131,7 @@ def tryToLogIn():
                 return Response(json.dumps(message), 200)
                 
             else:
+                time.sleep(2)
                 return Response("Password is invalid", 211)
         else:
             return Response("User unrecognized", 210)
@@ -156,8 +179,14 @@ def changeUserPassword():
         if not checkPassword(username, user['oldPassword']):
             return 'Authorization error - incorrect old password', 400
 
-        changePassword(username, user['newPassword'])
-        return Response("Password changed", 200)
+        if len(user['newPassword']) < 8:
+            return Response("Your password is too short (min. 8 chars)", 201)
+        else:
+            warn = ""
+            if calc_entropy(user['newPassword']) < 40:
+                warn = "\n       Warning: Your password is weak :("
+            changePassword(username, user['newPassword'])
+            return Response("Password changed" + warn, 200)
     except Exception as e:
         print(e, flush=True)
         return Response("Failed to read request", 400)
@@ -183,7 +212,24 @@ def uploadPdf(title):
         if not checkJwt(decoded):
             return 'JWT authentication failed', 400
 
+        username = decoded['user']
+        if db.hget(title, 'owner') != username:
+            users = db.lrange(title + '/access', 0, 100000)
+            if users == None:
+                return 'JWT authentication failed', 420
+            if users[0] != 'public':
+                access = False
+                for user in users:
+                    if user == username:
+                        access = True
+                if not access:
+                    return 'JWT authentication failed', 420
+
         f = request.files['file']
+        for char in f.filename:
+            if not char.isdigit() and not char.isalpha() and not char in " .@?#!():;%":
+                return Response("Filename contains forbidden character(s)", 201)
+    
         if savePdf(f, title):
             return "ok", 200
         else:
@@ -200,6 +246,20 @@ def downloadDeletePdf(title, name):
 
         if not checkJwt(decoded):
             return 'JWT authentication failed', 400
+
+        username = decoded['user']
+        if db.hget(title, 'owner') != username:
+            users = db.lrange(title + '/access', 0, 100000)
+            if users == None:
+                return 'JWT authentication failed', 420
+            if users[0] != 'public':
+                access = False
+                for user in users:
+                    if user == username:
+                        access = True
+                if not access:
+                    return 'JWT authentication failed', 420
+
 
         full_name = db.hget(title + '/' + name, "path_to_file")
         org_filename = db.hget(title + '/' + name, "org_filename")
@@ -232,11 +292,18 @@ def addPublication():
 
         username = decoded['user']
         pub = json.loads(request.data)
+        for char in pub['title']:
+            if not char.isdigit() and not char.isalpha() and not char in " @.?!():;%":
+                return Response("Title contains forbidden character(s)", 201)
+        for char in pub['author']:
+            if not char.isdigit() and not char.isalpha() and not char in " .":
+                return Response("Author contains forbidden character(s)", 201)
+        for char in pub['publisher']:
+            if not char.isdigit() and not char.isalpha() and not char in " .":
+                return Response("Publisher contains forbidden character(s)", 201)
         title = pub['title'].replace(" ", "")
         if db.hget(title, 'title') != None:
             return "This publication is already in database", 201
-        if '/' in title:
-            return "There is a forbidden sign '/' in publication's title", 202
         forbidden_names = ['pubnames', 'filenames', 'access']
         if title in forbidden_names:
             return "This name is forbidden", 203
@@ -244,7 +311,6 @@ def addPublication():
         db.hset(title, 'author', pub['author'])
         db.hset(title, 'publisher', pub['publisher'])
         db.hset(title, 'owner', username)
-        print(pub['names'], flush=True)
         if pub['accessibility'] == 'public':
             db.lpush(title + '/access', 'public')
         if pub['accessibility'] == 'custom':
@@ -334,6 +400,19 @@ def removePublication(title):
 
     if not checkJwt(decoded):
         return 'JWT authentication failed', 400
+
+    username = decoded['user']
+    if db.hget(title, 'owner') != username:
+        users = db.lrange(title + '/access', 0, 100000)
+        if users == None:
+            return 'JWT authentication failed', 420
+        if users[0] != 'public':
+            access = False
+            for user in users:
+                if user == username:
+                    access = True
+            if not access:
+                return 'JWT authentication failed', 420
 
     files = db.lrange(title + "/filenames", 0, 1000000)
     shutil.rmtree('files/' + title, ignore_errors=True)

@@ -29,17 +29,6 @@ const PublicationPage = ({ navigation: { navigate } }) => {
             socket.on("publication added", () => {  
                 setAlert(true)          
             })
-            /*socket.onopen = () => {
-                // connection opened
-                console.log("rypka?")
-            };
-            socket.onerror = (e) => {
-                // an error occurred
-                console.log(e.message);
-              };
-            socket.onmessage = ({ message }) => {
-                
-            }*/
             try {
                 if(view === 'publications') {
                     const token = await AsyncStorage.getItem('jwt')
@@ -110,7 +99,7 @@ const PublicationPage = ({ navigation: { navigate } }) => {
                 headers: {
                     'Authorization': token
                 },
-                body: JSON.stringify(values)
+                body: JSON.stringify({'title': values.title, 'publisher': values.publisher, 'author': values.author, 'accessibility': 'private', 'names': []})
         })
         if (response.status === 200) {
             setLoading(false)

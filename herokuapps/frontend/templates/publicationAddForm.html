@@ -23,8 +23,6 @@
 				<br>
 				<input type="text" name="publisher" placeholder="publisher" required/></label>
 				<br>
-				<input type="submit" class="normalbutton" name="btn" value="Save" />
-				<br>
 				<input type="radio" name="accessibility" value="private" checked> Private
 				<br>
 				<input type="radio" name="accessibility" value="public"> Public
@@ -33,6 +31,11 @@
 				<br>
 				<input type="text" name="users" placeholder="user1, user2, user3"/></label>
 				<br>
+				<input type="submit" class="normalbutton" name="btn" value="Save" />
+				<br>
+				{% if error != None %}
+                	<div>{{error}}</div>
+            	{% endif %}
 			</form>
 			<a href="/cloud">Cancel</a>
 		</div>

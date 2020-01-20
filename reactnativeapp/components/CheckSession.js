@@ -12,7 +12,7 @@ export default ({ navigation: { navigate } }) => {
         const sessionid = await AsyncStorage.getItem('sessionid')
         const response = await fetch('http://backendpamiw.herokuapp.com/check', {
                 method: 'POST',
-                body: JSON.stringify({'sessionid': session})
+                body: JSON.stringify({'sessionid': sessionid})
         })
         let authorized = false
         if (response.status === 200) {
