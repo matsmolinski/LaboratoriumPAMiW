@@ -1,0 +1,47 @@
+Certificate:
+    Data:
+        Version: 1 (0x0)
+        Serial Number: 1 (0x1)
+        Signature Algorithm: sha1WithRSAEncryption
+        Issuer: C=AU, ST=Some-State, O=PW, OU=Elektryczny, CN=Politechnika
+        Validity
+            Not Before: Jan 22 20:00:02 2020 GMT
+            Not After : Jan 21 20:00:02 2021 GMT
+        Subject: C=PL, ST=Mazowieckie, L=Warszawa, O=PW, OU=Elektryczny, CN=localhost
+        Subject Public Key Info:
+            Public Key Algorithm: rsaEncryption
+                RSA Public-Key: (1024 bit)
+                Modulus:
+                    00:f5:86:ee:de:b9:30:4e:58:d8:73:89:1b:75:ea:
+                    ad:8c:be:af:6f:da:b1:21:33:8c:a5:18:22:b3:e0:
+                    54:da:d3:f2:22:9c:11:02:bf:5f:4b:2c:26:db:b2:
+                    81:b0:19:d3:23:24:9f:4e:a8:8e:95:06:81:e2:7f:
+                    34:99:f6:a3:41:1e:25:41:53:bb:95:13:6e:8f:07:
+                    88:a7:d6:b7:2e:ce:a5:87:92:1e:22:fc:db:8b:f9:
+                    78:eb:b7:e9:d6:4a:eb:7f:53:9f:03:1a:52:f1:77:
+                    a5:47:ca:3e:33:d5:ef:f5:a3:76:36:d7:0f:83:ae:
+                    15:db:63:11:1a:73:62:46:93
+                Exponent: 65537 (0x10001)
+    Signature Algorithm: sha1WithRSAEncryption
+         3c:1c:9d:88:d4:0d:00:de:99:d5:a9:a6:94:2e:1c:fa:26:de:
+         63:5c:63:61:35:40:05:68:cc:86:91:64:01:ee:fa:84:bb:a2:
+         92:1e:9d:13:e4:97:95:60:f4:4f:61:43:c9:a7:5d:63:9d:3c:
+         8f:c1:1d:fb:9a:d6:55:94:ca:59:78:8e:c6:8d:31:c1:2d:d9:
+         90:b1:1f:29:69:da:22:c0:ea:62:10:33:ae:80:84:24:36:70:
+         60:69:a4:9d:7b:91:93:22:4a:f9:5c:38:fd:1b:6f:07:37:98:
+         2f:ce:44:1c:4d:d8:c7:e8:43:95:ab:ce:fc:e3:8e:10:54:5d:
+         07:bc
+-----BEGIN CERTIFICATE-----
+MIICODCCAaECAQEwDQYJKoZIhvcNAQEFBQAwXDELMAkGA1UEBhMCQVUxEzARBgNV
+BAgMClNvbWUtU3RhdGUxCzAJBgNVBAoMAlBXMRQwEgYDVQQLDAtFbGVrdHJ5Y3pu
+eTEVMBMGA1UEAwwMUG9saXRlY2huaWthMB4XDTIwMDEyMjIwMDAwMloXDTIxMDEy
+MTIwMDAwMlowbTELMAkGA1UEBhMCUEwxFDASBgNVBAgMC01hem93aWVja2llMREw
+DwYDVQQHDAhXYXJzemF3YTELMAkGA1UECgwCUFcxFDASBgNVBAsMC0VsZWt0cnlj
+em55MRIwEAYDVQQDDAlsb2NhbGhvc3QwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJ
+AoGBAPWG7t65ME5Y2HOJG3XqrYy+r2/asSEzjKUYIrPgVNrT8iKcEQK/X0ssJtuy
+gbAZ0yMkn06ojpUGgeJ/NJn2o0EeJUFTu5UTbo8HiKfWty7OpYeSHiL824v5eOu3
+6dZK639TnwMaUvF3pUfKPjPV7/WjdjbXD4OuFdtjERpzYkaTAgMBAAEwDQYJKoZI
+hvcNAQEFBQADgYEAPBydiNQNAN6Z1ammlC4c+ibeY1xjYTVABWjMhpFkAe76hLui
+kh6dE+SXlWD0T2FDyaddY508j8Ed+5rWVZTKWXiOxo0xwS3ZkLEfKWnaIsDqYhAz
+roCEJDZwYGmknXuRkyJK+Vw4/RtvBzeYL85EHE3Yx+hDlavO/OOOEFRdB7w=
+-----END CERTIFICATE-----

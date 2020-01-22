@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloud form</title>
+    <script type="text/javascript" src="{{ url_for('static', filename='cloud.js') }}"></script>
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.6/socket.io.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="panel">
+        <header><strong>Publications cloud</strong></header>
+        <span id="error" class="error" aria-live="polite"></span>
+        <br>
+        <section>
+            <form action = "https://localhost:3000/add-publication" method = "GET">
+                <button class="normalbutton" type = "submit">Add publication</button>
+            </form>
+            <ul>
+                {%for i in range(0, length)%} 
+                <li><button type="button" class="linkbutton" onclick="getPublication('{{links[i]}}')">{{ names[i] }}</button> <button type="button" class="linkbutton" onclick="removePublication('{{links[i]}}')"> remove</button></li>
+                {% endfor %}
+            </ul>
+        </section>
+        <form action = "https://localhost:3000/change-password" method = "GET">
+            <button class="normalbutton" type = "submit">Change password</button>
+        </form>
+        <button type="button" class="normalbutton" onclick="tryToLogOut()">Log out</button>
+        <br>
+    </div>
+</body>
+</html>

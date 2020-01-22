@@ -31,7 +31,7 @@ port = int(os.environ.get("PORT", 5000))
 dbauth = redis.from_url(os.environ.get("REDIS_URL"), db = 0, decode_responses=True)
 db = redis.from_url(os.environ.get("REDIS_URL"), db = 1, decode_responses=True)
 dbauth.flushall()
-db.flushall()
+#db.flushall()
 secret_key = generateKey(20)
  
 SWAGGER_URL = "/swagger"
@@ -74,7 +74,29 @@ def isLoginInDatabase(login):
     return True
 
 def calc_entropy(password):
-    return len(password) * (math.log(len(string.ascii_lowercase), 2))
+    base = 0
+    low = False
+    big = False
+    number = False
+    asci = False
+    for char in password:
+        if char in string.ascii_lowercase:
+            low = True
+        elif char in string.ascii_uppercase:
+            big = True
+        elif char in string.digits:
+            number = True
+        else:
+            asci = True
+    if low:
+        base = base + 26
+    if big:
+        base = base + 26
+    if number:
+        base = base + 10
+    if asci:
+        base = base + 30
+    return len(password) * (math.log(base, 2))
 
 def checkPassword(username, password):
     salt = db.hget(username, "salt")
@@ -136,9 +158,9 @@ def tryToLogIn():
                 
             else:
                 time.sleep(2)
-                return Response("Password is invalid", 211)
+                return Response("Password is invalid", 201)
         else:
-            return Response("User unrecognized", 210)
+            return Response("User unrecognized", 201)
     except Exception as e:
         print(e, file = sys.stderr)
         return Response("Failed to read request", 400)
@@ -151,16 +173,16 @@ def tryToLogOut():
         try:
             decoded = jwt.decode(jwtek.encode(), secret_key, algorithms='HS256')
         except jwt.ExpiredSignatureError:
-            return 'JWT expired', 400
+            return 'JWT expired', 401
 
         if not checkJwt(decoded):
-            return 'JWT authentication failed', 400
+            return 'JWT authentication failed', 401
             
         username = decoded['user']
         user = json.loads(request.data)
         
         if not username == dbauth.get(user["sessionid"]):
-            return 'Authorization error - jwt does not match session', 400
+            return 'Authorization error - jwt does not match session', 401
 
         dbauth.delete(user["sessionid"])
         return Response("Logged out", 200)
@@ -175,19 +197,19 @@ def changeUserPassword():
         try:
             decoded = jwt.decode(jwtek.encode(), secret_key, algorithms='HS256')
         except jwt.ExpiredSignatureError:
-            return 'JWT expired', 400
+            return 'JWT expired', 401
 
         if not checkJwt(decoded):
-            return 'JWT authentication failed', 400
+            return 'JWT authentication failed', 401
             
         username = decoded['user']
         user = json.loads(request.data)
         
         if not username == dbauth.get(user["sessionid"]):
-            return 'Authorization error - jwt does not match session', 400
+            return 'Authorization error - jwt does not match session', 401
 
         if not checkPassword(username, user['oldPassword']):
-            return 'Authorization error - incorrect old password', 400
+            return 'Authorization error - incorrect old password', 401
 
         if len(user['newPassword']) < 8:
             return Response("Your password is too short (min. 8 chars)", 201)
@@ -229,7 +251,7 @@ def checkIfLoggedIn():
         jsn = json.loads(request.data) 
         session = dbauth.get(jsn['sessionid'])
         if session == None:
-            return Response("Authorization failed", 400)          
+            return Response("Authorization failed", 401)          
         return Response("Everything fine", 200)
     except Exception as e:
         print(e, file = sys.stderr)
@@ -242,23 +264,23 @@ def uploadPdf(title):
         try:
             decoded = jwt.decode(jwtek.encode(), secret_key, algorithms='HS256')
         except jwt.ExpiredSignatureError:
-            return 'JWT expired', 400
+            return 'JWT expired', 401
             
         if not checkJwt(decoded):
-            return 'JWT authentication failed', 400
+            return 'JWT authentication failed', 401
 
         username = decoded['user']
         if db.hget(title, 'owner') != username:
             users = db.lrange(title + '/access', 0, 100000)
             if users == None:
-                return 'JWT authentication failed', 420
+                return 'JWT authentication failed', 401
             if users[0] != 'public':
                 access = False
                 for user in users:
                     if user == username:
                         access = True
                 if not access:
-                    return 'JWT authentication failed', 420
+                    return 'JWT authentication failed', 401
 
         f = request.files['file']
         for char in f.filename:
@@ -280,23 +302,23 @@ def downloadDeletePdf(title, name):
         try:
             decoded = jwt.decode(jwtek.encode(), secret_key, algorithms='HS256')
         except jwt.ExpiredSignatureError:
-            return 'JWT expired', 400
+            return 'JWT expired', 401
 
         if not checkJwt(decoded):
-            return 'JWT authentication failed', 400
+            return 'JWT authentication failed', 401
 
         username = decoded['user']
         if db.hget(title, 'owner') != username:
             users = db.lrange(title + '/access', 0, 100000)
             if users == None:
-                return 'JWT authentication failed', 420
+                return 'JWT authentication failed', 401
             if users[0] != 'public':
                 access = False
                 for user in users:
                     if user == username:
                         access = True
                 if not access:
-                    return 'JWT authentication failed', 420
+                    return 'JWT authentication failed', 401
 
 
         full_name = db.hget(title + '/' + name, "path_to_file")
@@ -326,10 +348,10 @@ def addPublication():
         try:
             decoded = jwt.decode(jwtek.encode(), secret_key, algorithms='HS256')
         except jwt.ExpiredSignatureError:
-            return 'JWT expired', 400
+            return 'JWT expired', 401
 
         if not checkJwt(decoded):
-            return 'JWT authentication failed', 400
+            return 'JWT authentication failed', 401
 
         username = decoded['user']
         pub = json.loads(request.data)
@@ -347,7 +369,7 @@ def addPublication():
             return "This publication is already in database", 201
         forbidden_names = ['pubnames', 'filenames', 'access']
         if title in forbidden_names:
-            return "This name is forbidden", 203
+            return "This name is forbidden", 201
         db.hset(title, 'title', pub['title'])
         db.hset(title, 'author', pub['author'])
         db.hset(title, 'publisher', pub['publisher'])
@@ -371,10 +393,10 @@ def getPublications():
         try:
             decoded = jwt.decode(jwtek.encode(), secret_key, algorithms='HS256')
         except jwt.ExpiredSignatureError:
-            return 'JWT expired', 400
+            return 'JWT expired', 401
 
         if not checkJwt(decoded):
-            return 'JWT authentication failed', 400
+            return 'JWT authentication failed', 401
         username = decoded['user']
         files = db.lrange('pubnames', 0, 1000000)
         pub_codes = []
@@ -411,25 +433,25 @@ def getPublication(title):
     try:
         decoded = jwt.decode(jwtek.encode(), secret_key, algorithms='HS256')
     except jwt.ExpiredSignatureError:
-        return 'JWT expired', 400
+        return 'JWT expired', 401
 
     if not checkJwt(decoded):           
-        return 'JWT authentication failed', 400
+        return 'JWT authentication failed', 401
 
     username = decoded['user']
     if db.hget(title, 'owner') == None:
-        return 'Publication unrecognized', 410
+        return 'Publication unrecognized', 401
     if db.hget(title, 'owner') != username:
         users = db.lrange(title + '/access', 0, 100000)
         if users == None:
-            return 'JWT authentication failed', 420
+            return 'JWT authentication failed', 401
         if users[0] != 'public':
             access = False
             for user in users:
                 if user == username:
                     access = True
             if not access:
-                return 'JWT authentication failed', 420                  
+                return 'JWT authentication failed', 401                  
 
     files = db.lrange(title + "/filenames", 0, 100000)
     message = {
@@ -446,23 +468,23 @@ def removePublication(title):
     try:
         decoded = jwt.decode(jwtek.encode(), secret_key, algorithms='HS256')
     except jwt.ExpiredSignatureError:
-        return 'JWT expired', 400
+        return 'JWT expired', 401
 
     if not checkJwt(decoded):
-        return 'JWT authentication failed', 400
+        return 'JWT authentication failed', 401
 
     username = decoded['user']
     if db.hget(title, 'owner') != username:
         users = db.lrange(title + '/access', 0, 100000)
         if users == None:
-            return 'JWT authentication failed', 420
+            return 'JWT authentication failed', 401
         if users[0] != 'public':
             access = False
             for user in users:
                 if user == username:
                     access = True
             if not access:
-                return 'JWT authentication failed', 420
+                return 'JWT authentication failed', 401
 
     files = db.lrange(title + "/filenames", 0, 1000000)
     shutil.rmtree('files/' + title, ignore_errors=True)

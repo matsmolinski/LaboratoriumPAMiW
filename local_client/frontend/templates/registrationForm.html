@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registration form</title>
+    <script type="text/javascript" src="{{ url_for('static', filename='registration.js') }}"></script>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+<form name="panel" onsubmit="tryToSubmit(); return false" method="post">
+    <div class="panel">
+        <header><strong>Registration</strong></header>
+        <br>
+        <label><b>Username</b>
+            <br>
+            <input id="username" type="text" placeholder="Enter username" name="user" required>
+            <br>
+            <span id="error-username" class="error" aria-live="polite"></span>
+            <br>
+        </label>
+        <br>
+        <label><b>Email</b>
+            <br>
+            <input id="email" type="email" placeholder="Enter email" name="email" oninput="checkEmail()" required>
+            <br>
+            <span id="error-email" class="error" aria-live="polite"></span>
+            <br>
+        </label>
+        <br>
+        <label><b>Password</b>
+            <br>
+            <input id="passwd" type="password" placeholder="Enter password" name="psw" oninput="checkPassword()" required>
+            <br>
+            <span id="error-passwd" class="error" aria-live="polite"></span>
+            <br>
+        </label>
+        <br>
+        <label><b>Repeat Password</b>
+            <br>
+            <input id="rpasswd" type="password" placeholder="Repeat password" name="psw-repeat" oninput="checkPassword()" required>
+            <br>
+            <span id="error-rpasswd" class="error" aria-live="polite"></span>
+        </label>
+        <hr>
+        <button type="submit" class="normalbutton">Register</button>
+        <p>Already have an account? <a href="/login">Sign in</a></p>
+    </div>
+</form>
+</body>
+</html>

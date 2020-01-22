@@ -1,0 +1,15 @@
+version: '2'
+services:
+
+  frontend:
+    container_name: frontend
+    restart: always
+    build:
+      context: .
+      dockerfile: ./frontend/Dockerfile
+    command: []
+    ports:
+      - "3000:80"
+    volumes:
+      - ./frontend:/frontend
+
